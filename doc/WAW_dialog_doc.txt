@@ -16,7 +16,7 @@
 	- following node will be included only if server dialog is built:
 	<node scope="type-server"/>
 	- following node will be included in all built dialogs:
-	<node/>
+	<node/> 
 
 	**********************************************************************
 	** <nodes>
