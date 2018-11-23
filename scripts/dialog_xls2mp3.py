@@ -47,6 +47,14 @@ def createMP3File(dialogData, handler, config):
                 tts.save(directory+'/'+name+'.mp3')
                 if cond== None:
                     cddf.write(','+name)
+                elif cond == '#E_L':
+                    cddf.write('\n'+'1_'+name)
+                elif cond == '#E_R':
+                    cddf.write('\n'+'2_'+name)
+                elif cond == '#E_D':
+                    cddf.write('\n'+'3_'+name)
+                elif cond == '#E_U':
+                    cddf.write('\n'+'4_'+name)
                 else:
                     cddf.write('\n'+cond+','+name)
                 num += 1
