@@ -31,7 +31,7 @@ class NodeData(object):
         self._buttons = OrderedDict()   # key: button label, value: full button value, MUST BE ORDERED!
         self._foldables = OrderedDict() # key: short text, value: long text
         self._node_name = ""            # Name of the node
-        self._node_condition = ""       # text of the condition
+        self._node_condition = ""       # text of the conditionNodeData.py
 
     def setName(self, node_name):
         self._node_name = node_name
