@@ -1,31 +1,13 @@
-# watson-assistant-workbench
-WAW is a toolkit for maintaining Watson Assistant data in github repository.
-It aims at 
-- structured data-driven approach, with easy diffs visible in GitHub
-- easy collaboration among large teams
-- improved dialog tree representation resulting in greater readability and easier updates compared to the original WA JSON format
-- easy-to-use XML format and tools that make authoring of Watson Conversation workspaces easier using standard text editors
-- ability to easily include and combine pieces of dialog together
-- full compatibility with the WA JSON workspace format
-- easy Continuous Integration - each commit to GitHub runs tests and updates conversation workspace if all succeed
-- automatic dialog code generation (go back, abort, etc. - actions needed in each dialog step)
-- support for internationalization
-- and more :)
+READ ME
+watson-assistant-workbench-mp3-extension
+WAW mp3 extension to create mp3 file from a xlsx file 
 
-It contains a bundle of tools for generating WA workspace from the structure data (and viceversa), testing and uploading (working with the WCS API).
+Create an xlsx file and save it to example\mp3_app\xls
+The first row in the file are the actions, second row are reactions.
+WAW takes reactions and transform it to mp3 file. Mp3 is saved in generated mp3 directory
+The name of every mp3 is written in cddf txt file. 
 
-Currently supported conversation version is 2017-02-03 except:
-- Fuzzy matching, Folders, Digression and Pattern defined entities are not supported.
-- A name of a dialog node still has to be unique as it is used as node ID.
-- Missing "slot_in_focus" property.
-- Slots are not supported in json to xml conversion scripts.
+For transformating text to mp3 is necessary to install Google text to speech module 
+pip install -m gTTs 
 
-Scripts use python 2.7, used modules are listed in the `requirements.txt` file. To satisfy all requirements run
-```
-pip install -r requirements.txt
-```
-For brief summary how to run scripts please see `scripts.md`.
 
-Description of T2C  and xml/csv WAW formats can be found in `doc` folder.
-
-Release notes can be found in 'release_notes.md'
