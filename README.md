@@ -1,7 +1,7 @@
 
 watson-assistant-workbench-mp3-extension
 
-This is extension of WAW for creating mp3 file from a xlsx file 
+This is an extension of WAW for creating mp3 files from a xlsx file.
 
 Create a xlsx file and save it to example\mp3_app\xls
 The first row in the file are the actions, second row are reactions.
