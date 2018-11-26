@@ -1,4 +1,4 @@
-READ ME
+
 watson-assistant-workbench-mp3-extension
 WAW mp3 extension to create mp3 file from a xlsx file 
 
