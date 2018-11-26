@@ -8,6 +8,8 @@ WAW takes reactions and transform it to mp3 file. Mp3 is saved in generated mp3 
 The name of every mp3 is written in cddf txt file. 
 
 For transformating text to mp3 is necessary to install Google text to speech module 
+```
 pip install -m gTTs 
+```
 
 
