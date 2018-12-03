@@ -47,14 +47,14 @@ def createMP3File(dialogData, handler, config):
                 tts.save(directory+'/'+name+'.mp3')
                 if cond== None:
                     cddf.write(','+name)
-                elif cond == '#E_L':
-                    cddf.write('\n'+'1_'+name)
                 elif cond == '#E_R':
-                    cddf.write('\n'+'2_'+name)
-                elif cond == '#E_D':
-                    cddf.write('\n'+'3_'+name)
+                    cddf.write('1_'+name)
+                elif cond == '#E_L':
+                    cddf.write('2_'+name)
                 elif cond == '#E_U':
-                    cddf.write('\n'+'4_'+name)
+                    cddf.write ('3_'+name)
+                elif cond == '#E_D':
+                    cddf.write('4_'+name)
                 else:
                     cddf.write('\n'+cond+','+name)
                 num += 1
@@ -83,7 +83,7 @@ if __name__ == '__main__':
         eprintf('ERROR: xls is not defined')
         exit(1)
 
-    if not hasattr(config,'commin_generated_mp3'):
+    if not hasattr(config,'common_generated_mp3'):
         if VERBOSE: printf('INFO: generated mp3 parameter is not defined\n')
     xlsxHandler = XLSXHandler(config)
     allDataBlocks = {}  # map of datablocks, key: Excel sheet name, value: list of all block in the sheet
