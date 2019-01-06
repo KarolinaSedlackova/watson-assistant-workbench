@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 """
  We need to pass through content at least twice to connect label with node_names, we use third pass to generate XML
   The first pass: (processing separately each file)
@@ -42,16 +43,24 @@ from zipfile import BadZipfile
 from xml.sax.saxutils import escape
 import DialogData as Dialog
 from DialogData import DialogData
+from itertools import izip_longest
+from NodeData import NodeData
+
 
 class XLSXHandler(object):
     """ Converts Excel spreadsheet forom multiple fles to an internal data representation in DialogData.
     """
+
     def __init__(self, config):
-        self._blocks = []                 # internal representation of XLS, list of blocks, (block are the lines separated by empty line)
-        self._dialogData = DialogData(config)   # internal representation of the workspace
-        self._config= config              # we need config to get NAME_POLICY, verbosity,..
+        self._blocks = []  # internal representation of XLS, list of blocks, (block are the lines separated by empty line)
+        self._dialogData = DialogData(config)  # internal representation of the workspace
+        self._config = config  # we need config to get NAME_POLICY, verbosity,..
         self._VERBOSE = hasattr(config, 'common_verbose')
-        self._NAME_POLICY = 'soft'        # TBD: enable to set the NamePolicy from config file
+        self._NAME_POLICY = 'soft'  # TBD: enable to set the NamePolicy from config file
+        self.menu_reacts = []
+        self.menu_blocks = []  # menu blocks
+        self._numerized_outputs = []  # create numerized mp3
+        self._num_of_options=[]
 
     def getBlocks(self):
         return self._blocks
@@ -78,7 +87,7 @@ class XLSXHandler(object):
             try:
                 domainName = unicode(domainName, 'utf-8')  # Python 2
             except NameError:
-                domainName = str(domainName)               # Python 3
+                domainName = str(domainName)  # Python 3
             workbook = load_workbook(filename=filename, read_only=True)
         except (IOError, BadZipfile):
             eprintf('Error: File does not seem to be a valid Excel spreadsheet: %s\n', filename)
@@ -89,18 +98,19 @@ class XLSXHandler(object):
             # get prefix is a sheet title
             printf(' Sheet: %s\n', sheet.title)
             try:
-                prefix = unicode(sheet.title, 'utf-8')  # Python 2
+                prefix = (sheet.title.encode('utf-8'))  # Python 2
             except NameError:
-                prefix = str(sheet.title)               # Python 3
+                prefix = str(sheet.title)  # Python 3
 
-            currentBlock = [] # Each cheet starts a new block
+            currentBlock = []  # Each cheet starts a new block
             # Separate all data blocks in the sheet, if the currentBlock starts with header, the header is considered to be part of currentBlock
             for row in sheet.iter_rows(max_col=4):
                 validRow = False
                 # Check if the row is valid. Row is valid if it contains at least one column not empty and different from comment
-                for columnIndex in range (0, 4):
+                for columnIndex in range(0, 4):
                     if row[columnIndex] and row[columnIndex].value and not (row[columnIndex].value.startswith('//')):
                         validRow = True
+
                 # Three slashes in the first cell cause whole rest of the line to be treated as comment
                 if row[0].value and row[0].value.startswith('///'):
                     validRow = False
@@ -112,28 +122,37 @@ class XLSXHandler(object):
                     currentBlock = []
                 else:
                     # if valid row - we add the raw to block
-                    currentBlock.append((escape(row[0].value.strip()) if row[0].value and not row[0].value.startswith('//') else None,
-                                         escape(row[1].value.strip()) if row[1].value and not row[1].value.startswith('//') else None,
-                                         escape(row[2].value.strip()) if row[2].value and not row[2].value.startswith('//') else None,
-                                         escape(row[3].value.strip()) if row[3].value and not row[3].value.startswith('//') else None))
+                    currentBlock.append(
+                        (escape(row[0].value.strip()) if row[0].value and not row[0].value.startswith('//') else None,
+                         escape(row[1].value.strip()) if row[1].value and not row[1].value.startswith('//') else None,
+                         escape(row[2].value.strip()) if row[2].value and not row[2].value.startswith('//') else None,
+                         escape(row[3].value.strip()) if row[3].value and not row[3].value.startswith('//') else None))
             if currentBlock:
                 self.__createBlock(domainName, prefix, currentBlock)  # store the last block of the sheet
 
     def __createBlock(self, domain, prefix, block):
         """ Add the block to the block list """
         if not block or not block[0][0]:
-            printf('WARNING: First cell of the data block does not contain any data. (domain=%s, prefix=%s)\n', domain, prefix)
-            return
+            printf('WARNING: First cell of the data block does not contain any data. (domain=%s, prefix=%s)\n', domain,
+                   prefix)
+            if block[0][1]:
+                self.menu_reacts.append(block[0][1])
+            elif block[0][2]:
+                self._dialogData._options.append(block[0][2])
+            else:
+                return
         self._blocks.append((domain, prefix, block))
+        # print(self._blocks)
+        # print(len(self._blocks))
 
     def __is_condition_block(self, block):
         """ Returns true if first cell contains X_PLACEHOLDER
             or more then 1 condition indicator (one is just a header)
         """
-        no_special=len(re.sub('[^#$@&|]', '', block[0][0]))
-        if (Dialog.X_PLACEHOLDER in block[0][0] and not block[0][1]): #header containing X_PLACEHOLDER
+        no_special = len(re.sub('[^#$@&|]', '', block[0][0]))
+        if (Dialog.X_PLACEHOLDER in block[0][0] and not block[0][1]):  # header containing X_PLACEHOLDER
             return True
-        if ((no_special > 0) and block[0][1]):                        #Simple intent-output pair,
+        if ((no_special > 0) and block[0][1]):  # Simple intent-output pair,
             return True  # simple intent-output pair,
         return False
 
@@ -171,14 +190,15 @@ class XLSXHandler(object):
             This is typically called only once after all T2C data are processed and after they are put to _dataBlocks
              by parseXLSXIntoDataBlocks
         """
-        for domain, prefix, block in self._blocks: #For each block
+        for domain, prefix, block in self._blocks:  # For each block
             # Validity check of parameters
             if not block or not isinstance(block[0], tuple) or not block[0][0]:
-                printf('WARNING: First cell of the data block does not contain any data. (domain=%s, prefix=%s)\n', domain, prefix)
+                printf('WARNING: First cell of the data block does not contain any data. (domain=%s, prefix=%s)\n',
+                       domain, prefix)
                 continue
 
             # separate label, strip it from block
-            label= self.__separate_label_from_block(block)
+            label = self.__separate_label_from_block(block)
 
             firstCell = block[0][0]
 
@@ -190,7 +210,7 @@ class XLSXHandler(object):
                 printf('WARNING: Value next to header. (domain=%s, prefix=%s, row=%s)\n', domain, prefix, block[0])
                 exit()
 
-            if self.__is_condition_block(block): # Condition block does not define an intent nor entity,
+            if self.__is_condition_block(block):  # Condition block does not define an intent nor entity,
                 conditionHasX = Dialog.X_PLACEHOLDER in block[0][0]
                 if not conditionHasX:  # simple pair condition-output, condition is one, output can have more outputs
                     # left column is a condition
@@ -246,12 +266,14 @@ class XLSXHandler(object):
             eprintf('ERROR: Format error. condition does not have a output : %s\n', block[0])
             exit()
         if len(block) > 1 and block[1][0]:
-            eprintf('ERROR: Format error. condititional block without header shold have just one condition: %s\n', block[0])
+            eprintf('ERROR: Format error. condititional block without header shold have just one condition: %s\n',
+                    block[0])
             exit()
-        node_name = self._dialogData.createUniqueNodeName(block[0][0])  # derive node name from explicit condition and make it unique
+        node_name = self._dialogData.createUniqueNodeName(
+            block[0][0])  # derive node name from explicit condition and make it unique
         node_condition = block[0][0]
         nodeData = self._dialogData.createNode(node_name, domain)  # create space for new node, remembers node_name
-        #nodeData.setName(node_name)
+        # nodeData.setName(node_name)
         nodeData.setCondition(node_condition)
 
         for row in block:
@@ -261,7 +283,7 @@ class XLSXHandler(object):
                 eprintf(
                     'ERROR: Format error. empty output in a conditional block does not make sense. %s\n', block[0])
                 exit()
-        if label: # add lable - if any
+        if label:  # add lable - if any
             self._dialogData.addLabel(label, node_name)
 
     def __handle_entity_block(self, block, domain, label):
@@ -281,23 +303,24 @@ class XLSXHandler(object):
 
         entityData = self._dialogData.createEntity(entity_name)  # create space for new entity
 
-        first_output= block[1][1] if startsWithHeader else block[0][1]  # if we have a header, the first output is in second row
-        if first_output :  # if first otput then any output -> we generate a node, assign label ..
-            node_name = self._dialogData.createUniqueNodeName(entity_name)  # derive node name from explicit intent name, make it unique
-            nodeData = self._dialogData.createNode(node_name, domain) #create space for new node, remembers node_name
+        first_output = block[1][1] if startsWithHeader else block[0][
+            1]  # if we have a header, the first output is in second row
+        if first_output:  # if first output then any output -> we generate a node, assign label ..
+            node_name = self._dialogData.createUniqueNodeName(
+                entity_name)  # derive node name from explicit intent name, make it unique
+            nodeData = self._dialogData.createNode(node_name, domain)  # create space for new node, remembers node_name
             # nodeData.setName(node_name)
             node_condition = entity_name
             nodeData.setCondition(node_condition)
             if label:
                 self._dialogData.addLabel(label, node_name)
         else:  # only entity definition
-            if label: # this block does not generate node, label does no make sense
+            if label:  # this block does not generate node, label does no make sense
                 eprintf('ERROR: Format error. Label is next to the block which is not generating node : %s\n', block[0])
                 exit()
         for row in block:
-            if row[0] and not row[0].startswith(u'@'):              # we skip header if any
-                entityData.addValue(row[0].rstrip().rstrip(';'))    # Collect entity values and synonyms
-
+            if row[0] and not row[0].startswith(u'@'):  # we skip header if any
+                entityData.addValue(row[0].rstrip().rstrip(';'))  # Collect entity values and synonyms
             if row[1]:
                 if not first_output:
                     eprintf('ERROR: Format error. Adjacent outputs are not in a sigle block : %s\n', block[0])
@@ -311,38 +334,125 @@ class XLSXHandler(object):
               (reason - difficult to refer to the intent),
             - block has optional output(s) (then header is not required but also optional)
         """
+
         startsWithHeader = block[0][0].startswith(u'#')  # is header?
-        if not startsWithHeader and not block[0][1]:
+        if block[0][0].startswith('!Menu') and not block[0][1]:
+            self.menu_blocks.append(block[0][0])
+        elif block[0][0] == '!!Menu' and not block[0][1]:
+            self.menu_blocks.append(block[0][0])
+        elif not startsWithHeader and not block[0][1]:
             eprintf('ERROR: Internal error. __handle_intent_block handling ConditionBlock : %s\n', block[0])
             exit()
         if startsWithHeader:
-            intent_name =  block[0][0][1:] # header is name (including hash)
+            intent_name = block[0][0][1:]  # header is name (including hash)
         else:
             # if no name -derive intent name automatically form the first sentence, make it unique among intents
             intent_name = self._dialogData.createUniqueIntentName(block[0][0])
 
         intentData = self._dialogData.createIntent(intent_name)  # create space for new intent
 
-        first_output= block[1][1] if startsWithHeader else block[0][1]  # if we have a header, the first output is in second row
-        if first_output :  # if first otput then any output -> we generate a node, assign label ..
-            node_name = self._dialogData.createUniqueNodeName(intent_name)  # derive node name from explicit intent name, make it unique
-            nodeData = self._dialogData.createNode(node_name, domain) #create space for new node, remembers node_name
-            #nodeData.setName(node_name)  #- not needed- set by createNode
-            node_condition = '#'+intent_name
+        first_output = block[1][1] if startsWithHeader else block[0][
+            1]  # if we have a header, the first output is in second row
+        if first_output:  # if first output then any output -> we generate a node, assign label ..
+            node_name = self._dialogData.createUniqueNodeName(
+                intent_name)  # derive node name from explicit intent name, make it unique
+            nodeData = self._dialogData.createNode(node_name, domain)  # create space for new node, remembers node_name
+            # nodeData.setName(node_name)  #- not needed- set by createNode
+            node_condition = '#' + intent_name
             nodeData.setCondition(node_condition)
+
             if label:
                 self._dialogData.addLabel(label, node_name)
         else:  # only intent definition
-            if label: # this block does not generate node, label does no make sense
+            if label:  # this block does not generate node, label does no make sense
                 eprintf('ERROR: Format error. Label is next to the block which is not generating node : %s\n', block[0])
                 exit()
 
         for row in block:
-            if row[0] and not row[0].startswith(u'#'):   # we skip header if any
+            if row[0] and not row[0].startswith(u'#'):  # we skip header if any
                 intentData.addExample(row[0])  # Collect intent definition
             if row[1]:
-                if not first_output:
+                if block[0][0].startswith('!Menu') and not first_output:
+                    continue
+                elif not first_output:
                     eprintf('ERROR: Format error. Adjacent outputs are not in a sigle block : %s\n', block[0])
                     exit()
                 else:
                     nodeData.addRawOutput(row[1:], self._dialogData.getAllEntities())
+
+    def create_numerized_outputs(self):
+        menu_reacts=self.menu_reacts
+        outputs = self._numerized_outputs
+        blocks = self._blocks
+        menu = self.menu_blocks
+        num_of_options=self._num_of_options
+        # CREATING A LIST OF A SECOND COLUMN IN EXCEL SHEET
+        for block in blocks:
+            if block[2][0][1] and len(block[2]) == 1:
+                outputs.append(block[2][0][1])
+                if block[2][0][1] and not block[2][0][0]:
+                    num_of_options.append(len(block[2]))
+            elif len(block[2]) > 1:
+                for i in range(len(block[2])):
+                    outputs.append(block[2][i][1])
+                    if block[2][0][1] and not block[2][0][0]:
+                        num_of_options.append(len(block[2]))
+        # FINDING THE ITEMS OF THE MENU
+        index_of_match = [x for x,item in enumerate(outputs) if item in menu_reacts]
+        # REMOVING UNUSED NUMBER OF OPTIONS
+        for item in num_of_options:
+            if item==num_of_options.count(item):
+                deleted_num=num_of_options.count(item)-1
+                for i in range(deleted_num):
+                    num_of_options.pop(i)
+        # ENUMERATING THE OUTPUTS
+        for n, item in enumerate(outputs):
+            num = str(n + 1).zfill(3)
+            outputs[n] = num
+            # ADDING THE ENUMERATED OUTPUTS TO MENU
+            if n in index_of_match:
+                menu.insert(-1,num)
+                menu.insert(-1,num_of_options[0])
+                num_of_options.pop(0)
+        return outputs
+
+    def menu_handling(self, block):
+        numerized_outputs = self.create_numerized_outputs()
+        menu = self.menu_blocks
+        # CREATING A WORKSPACE FOR MENU
+        menu_workspace=str(menu)
+        for ch in ['[',']',"'"]:
+            if ch in menu_workspace:
+                menu_workspace=menu_workspace.replace(ch,"")
+        menu_workspace=menu_workspace.replace('u!', '!')
+        name_of_menu = menu_workspace[6:menu_workspace.find(';')]
+        if 'flat' in name_of_menu: #CHECKING FLAT OR ROUND PARAMETR
+            index_round_flat=(name_of_menu.index('flat'))
+            round_flat="0"
+        elif 'round' in name_of_menu:
+            index_round_flat =name_of_menu.index('round')
+            round_flat="1"
+        starting_index=6+len(name_of_menu)+1
+        name_of_menu=name_of_menu[:index_round_flat].strip()  # DEFINING A NAME OF THE MENU
+        menu_workspace=menu_workspace[starting_index::]
+        order=menu_workspace[6:menu_workspace.index(';')]
+        order_menu="10"         # CHECKING AN ORDER OF THE MENU
+        if "last" in order:
+            order_menu="01"
+        if "first" in order:
+            order_menu = "00"
+        starting_index=6+len(order)+1
+        menu_workspace=menu_workspace[starting_index::]
+        timeout=menu_workspace[8:menu_workspace.index(',')]       # DEFINING TIMEOUT OF THE MENU
+        starting_index=8+len(timeout)+1
+        ending_index=menu_workspace.index("!!Menu")
+        menu_workspace=menu_workspace[starting_index:ending_index-2]
+        # THE FINAL LOOK OF MENU FOR ARDUINO
+        final_menu=name_of_menu+"[]"+'{4, '+'0, '+order_menu+', '+round_flat+', '+timeout+', '+menu_workspace+'}'
+        self._dialogData._menu.append(final_menu)
+
+
+
+
+
+
