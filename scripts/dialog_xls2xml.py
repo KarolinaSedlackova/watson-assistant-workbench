@@ -34,6 +34,7 @@ def saveDialogDataToFileSystem(dialogData, handler, config):
         print('Created new directory ' + getattr(config, 'common_generated_dialogs'))
     # Generate xml file per dialog domain (original xls workbook (all its sheets).
     domains = dialogData.getAllDomains()
+<<<<<<< HEAD
     for domain_name in domains:  # For all domains
         filename = getattr(config, 'common_generated_dialogs') + '/' + domain_name + '.xml'
         with codecs.open(filename, 'w', encoding='utf8') as dialogFile:
@@ -43,6 +44,16 @@ def saveDialogDataToFileSystem(dialogData, handler, config):
     # Create directory for intents (if it does not exist already)
     if hasattr(config, 'common_generated_intents') and not os.path.exists(
             getattr(config, 'common_generated_intents')[0]):
+=======
+    for domain_name in domains:   # For all domains
+        filename = getattr(config, 'common_generated_dialogs') + '/' + domain_name + '.xml'
+        with codecs.open(filename, 'w', encoding='utf8') as dialogFile:
+            xmlData = handler.convertDialogData(dialogData, domains[domain_name]) #process all nodes of the domain
+            dialogFile.write(handler.printXml(xmlData))
+
+    # Create directory for intents (if it does not exist already)
+    if hasattr(config, 'common_generated_intents') and not os.path.exists(getattr(config, 'common_generated_intents')[0]):
+>>>>>>> mp3_extension
         os.makedirs(getattr(config, 'common_generated_intents')[0])
         print('Created new directory ' + getattr(config, 'common_generated_intents')[0])
     # One file per intent
@@ -50,20 +61,32 @@ def saveDialogDataToFileSystem(dialogData, handler, config):
         if len(intentData.getExamples()) > 0:
             intent_name = intent[1:] if intent.startswith(u'#') else intent
 
+<<<<<<< HEAD
             with open(os.path.join(getattr(config, 'common_generated_intents')[0],
                                    intent_name.encode('ascii', 'ignore') + '.csv'), 'w') as intentFile:
+=======
+            with open(os.path.join(getattr(config, 'common_generated_intents')[0], intent_name.encode('ascii', 'ignore') + '.csv'), 'w') as intentFile:
+>>>>>>> mp3_extension
                 for example in intentData.getExamples():
                     intentFile.write(example.encode('utf8') + '\n')
 
     # Create directory for entities (if it does not exist already)
+<<<<<<< HEAD
     if hasattr(config, 'common_generated_entities') and not os.path.exists(
             getattr(config, 'common_generated_entities')[0]):
+=======
+    if hasattr(config, 'common_generated_entities') and not os.path.exists(getattr(config, 'common_generated_entities')[0]):
+>>>>>>> mp3_extension
         os.makedirs(getattr(config, 'common_generated_entities')[0])
         print('Created new directory ' + getattr(config, 'common_generated_entities')[0])
     # One file per entity
     for entity_name, entityData in dialogData.getAllEntities().items():
+<<<<<<< HEAD
         with open(os.path.join(getattr(config, 'common_generated_entities')[0],
                                entity_name.encode('ascii', 'ignore') + '.csv'), 'w') as entityFile:
+=======
+        with open(os.path.join(getattr(config, 'common_generated_entities')[0], entity_name.encode('ascii', 'ignore') + '.csv'), 'w') as entityFile:
+>>>>>>> mp3_extension
             for entityList in entityData.getValues():
                 entityFile.write(entityList.encode('utf8') + '\n')
 
@@ -144,8 +167,15 @@ if __name__ == '__main__':
         elif os.path.exists(fileOrFolder):
             xlsxHandler.parseXLSXIntoDataBlocks(fileOrFolder)
 
+<<<<<<< HEAD
     xlsxHandler.convertBlocksToDialogData()  # Blocks-> DialogData
     xlsxHandler.updateReferences()  # Resolving cross references
     saveDialogDataToFileSystem(xlsxHandler.getDialogData(), XMLHandler(), config)
     createMP3File(xlsxHandler.getDialogData(), MP3Handler(), config)
+=======
+    xlsxHandler.convertBlocksToDialogData() # Blocks-> DialogData
+    xlsxHandler.updateReferences()          # Resolving cross references
+    saveDialogDataToFileSystem(xlsxHandler.getDialogData(), XMLHandler(), config)
+
+>>>>>>> mp3_extension
     printf('\nFINISHING: ' + os.path.basename(__file__) + '\n')

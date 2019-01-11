@@ -31,7 +31,8 @@ class NodeData(object):
         self._buttons = OrderedDict()   # key: button label, value: full button value, MUST BE ORDERED!
         self._foldables = OrderedDict() # key: short text, value: long text
         self._node_name = ""            # Name of the node
-        self._node_condition = ""       # text of the conditionNodeData.py
+        self._node_condition = ""       # text of the condition
+
 
     def setName(self, node_name):
         self._node_name = node_name
@@ -90,7 +91,7 @@ class NodeData(object):
         return self._foldables
 
     def addRawOutput(self, rawOutputs, labelsMap):
-        """ Read the raw output and store all data from it - 
+        """ Read the raw output and store all data from it -
             channel outputs, context variables and jumpto definitions. """
         self._rawOutputs.append(rawOutputs)
         if not isinstance(rawOutputs, tuple) or len(rawOutputs) < 1:
@@ -167,3 +168,5 @@ class NodeData(object):
             shortAndLong = re.split('=', button)
             if len(shortAndLong) == 2:
                 self.addFoldable(shortAndLong[0].strip(), shortAndLong[1].strip())
+
+

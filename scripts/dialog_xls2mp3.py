@@ -48,20 +48,21 @@ def createMP3File(dialogData, handler, config):
                 if cond== None:
                     cddf.write(','+name)
                 elif cond == '#E_R':
-                    cddf.write('1_'+name)
+                    cddf.write('\n'+'1_'+name)
                 elif cond == '#E_L':
-                    cddf.write('2_'+name)
+                    cddf.write('\n'+'2_'+name)
                 elif cond == '#E_U':
-                    cddf.write ('3_'+name)
+                    cddf.write ('\n'+'3_'+name)
                 elif cond == '#E_D':
-                    cddf.write('4_'+name)
+                    cddf.write('\n'+'4_'+name)
                 else:
-                    cddf.write('\n'+cond+','+name)
-                num += 1
+                    pass
 
+                num+= 1
+            # ADD MENU TO TEXT FILE
+            menu=dialogData.get_menu()
+            cddf.write('\n'+'const PROGMEM int '+menu[0])
             cddf.close()
-
-
 
 if __name__ == '__main__':
     printf('\nSTARTING: ' + os.path.basename(__file__) + '\n')
@@ -107,5 +108,6 @@ if __name__ == '__main__':
 
     xlsxHandler.convertBlocksToDialogData()  # Blocks-> DialogData
     xlsxHandler.updateReferences()  # Resolving cross references
+    xlsxHandler.menu_handling(xlsxHandler.getBlocks())
     createMP3File(xlsxHandler.getDialogData(), MP3Handler(), config)
     printf('\nFINISHING: ' + os.path.basename(__file__) + '\n')
