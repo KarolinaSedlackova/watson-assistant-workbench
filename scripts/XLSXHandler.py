@@ -302,7 +302,6 @@ class XLSXHandler(object):
             entity_name = self._dialogData.createUniqueEntityName(block[0][0])
 
         entityData = self._dialogData.createEntity(entity_name)  # create space for new entity
-
         first_output = block[1][1] if startsWithHeader else block[0][
             1]  # if we have a header, the first output is in second row
         if first_output:  # if first output then any output -> we generate a node, assign label ..
@@ -379,6 +378,7 @@ class XLSXHandler(object):
                     exit()
                 else:
                     nodeData.addRawOutput(row[1:], self._dialogData.getAllEntities())
+                    print(row[1])
 
     def create_numerized_outputs(self):
         menu_reacts=self.menu_reacts
@@ -421,27 +421,31 @@ class XLSXHandler(object):
         menu = self.menu_blocks
         # CREATING A WORKSPACE FOR MENU
         menu_workspace=str(menu)
+        param1 = 0
         for ch in ['[',']',"'"]:
             if ch in menu_workspace:
                 menu_workspace=menu_workspace.replace(ch,"")
         menu_workspace=menu_workspace.replace('u!', '!')
         name_of_menu = menu_workspace[6:menu_workspace.find(';')]
-        index_round_flat=menu_workspace[6]
+        index_round_flat=6
+        if 'auto'.upper() in name_of_menu:
+            param1+=0x01
+        if 'intro'.upper() in name_of_menu:
+            param1+=0x02
         if 'flat' in name_of_menu: #CHECKING FLAT OR ROUND PARAMETR
             index_round_flat=(name_of_menu.index('flat'))
-            round_flat="0"
         elif 'round' in name_of_menu:
             index_round_flat =name_of_menu.index('round')
-            round_flat="1"
+            param1+=0x10
         starting_index=6+len(name_of_menu)+1
         name_of_menu=name_of_menu[:index_round_flat].strip()  # DEFINING A NAME OF THE MENU
         menu_workspace=menu_workspace[starting_index::]
         order=menu_workspace[6:menu_workspace.index(';')]
-        order_menu="10"         # CHECKING AN ORDER OF THE MENU
+        # CHECKING AN ORDER OF THE MENU
         if "last" in order:
-            order_menu="01"
-        if "first" in order:
-            order_menu = "00"
+            param1+=0x04
+        if "first" and "last" not in order:
+            param1+=0x08
         starting_index=6+len(order)+1
         menu_workspace=menu_workspace[starting_index::]
         timeout=menu_workspace[8:menu_workspace.index(',')]       # DEFINING TIMEOUT OF THE MENU
@@ -449,7 +453,7 @@ class XLSXHandler(object):
         ending_index=menu_workspace.index("!!Menu")
         menu_workspace=menu_workspace[starting_index:ending_index-2]
         # THE FINAL LOOK OF MENU FOR ARDUINO
-        final_menu=name_of_menu+"[]"+'{4, '+'0, '+order_menu+', '+round_flat+', '+timeout+', '+menu_workspace+'}'
+        final_menu=name_of_menu+"[]"+'{4, '+str(param1)+', '+'10'+', '+timeout+', '+menu_workspace+'}'
         self._dialogData._menu.append(final_menu)
 
 
