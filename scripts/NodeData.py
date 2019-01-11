@@ -16,7 +16,6 @@ limitations under the License.
 import re
 from wawCommons import eprintf
 from collections import OrderedDict
-from unidecode import unidecode
 
 class NodeData(object):
     """ Represents a data structure containing all necessary information for a single dialog node
@@ -33,7 +32,6 @@ class NodeData(object):
         self._node_name = ""            # Name of the node
         self._node_condition = ""       # text of the condition
 
-
     def setName(self, node_name):
         self._node_name = node_name
 
@@ -45,12 +43,6 @@ class NodeData(object):
 
     def getCondition(self):
         return self._node_condition
-
-
-    # def getConditionToArr(self):
-    #     conditions = []
-    #     conditions.append(self._node_condition)
-    #     return conditions
 
     def addChannelOutput(self, channelName, channelOutput):
         if channelName not in self._channels:
@@ -91,13 +83,13 @@ class NodeData(object):
         return self._foldables
 
     def addRawOutput(self, rawOutputs, labelsMap):
-        """ Read the raw output and store all data from it -
+        """ Read the raw output and store all data from it - 
             channel outputs, context variables and jumpto definitions. """
         self._rawOutputs.append(rawOutputs)
         if not isinstance(rawOutputs, tuple) or len(rawOutputs) < 1:
             eprintf('Warning: rawOutput does not contain any data: %s\n', rawOutputs)
 
-        if len(rawOutputs) >= 1 and (isinstance(rawOutputs[0], str) or isinstance(rawOutputs[0],unicode)):
+        if len(rawOutputs) >= 1 and (isinstance(rawOutputs[0], str) or isinstance(rawOutputs[0], unicode)):
             items = re.split('%%', rawOutputs[0])
             self.__handleChannelDefinition('1'+items[0])
             for item_i in range(1, len(items)):
@@ -119,10 +111,6 @@ class NodeData(object):
                 self.__handleButtonDefinition(rawOutputs[1])
             if rawOutputs[2]:
                 self.__handleJumpToDefinition(rawOutputs[2], labelsMap)
-
-    def getRawOutputs(self):
-        raw_outputs = [raw_elem[0] for raw_elem in self._rawOutputs]
-        return raw_outputs
 
     def generateNodes(self):
         return self._channels or self._buttons
@@ -168,5 +156,3 @@ class NodeData(object):
             shortAndLong = re.split('=', button)
             if len(shortAndLong) == 2:
                 self.addFoldable(shortAndLong[0].strip(), shortAndLong[1].strip())
-
-

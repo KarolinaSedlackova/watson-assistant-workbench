@@ -18,9 +18,7 @@ from EntityData import EntityData
 from NodeData import NodeData
 import unicodedata, unidecode
 from wawCommons import printf, eprintf, toIntentName
-
 X_PLACEHOLDER = u'&lt;x&gt;'
-
 
 class DialogData(object):
     """ DialogData represents complete dialog (intents, entities, nodes, labels).
@@ -31,22 +29,21 @@ class DialogData(object):
 
     def __init__(self, config):
         # we store on bag of intents and one bag of entities (each results in one file all in corresponding directory
-        self._labelsMap = {}  # key: lable, value - node name - translation table for generating jumps
+        self._labelsMap = {} # key: lable, value - node name - translation table for generating jumps
 
         self._entities = {}  # key: entity name, value: list of all Dialog entity options; entities is a flat list over all the domains
-        self._intents = {}  # key: intent name, value: IntentData object; intents is a flat list over all the domains
+        self._intents = {}   # key: intent name, value: IntentData object; intents is a flat list over all the domains
 
         # nodes are grouped based on domain
-        self._nodes = {}  # key: node name, value: list of all associated dialog nodes
-        self._domains = {}  # key: domain name, value: list of all associated nodes with the given domain
-        self._menu = []  # list of menus
-        self._config = config  # we need config to get NAME_POLICY, verbosity,..
+        self._nodes = {}     # key: node name, value: list of all associated dialog nodes
+        self._domains = {}   # key: domain name, value: list of all associated nodes with the given domain
+
+        self._config= config            #we need config to get NAME_POLICY, verbosity,..
         self._VERBOSE = hasattr(config, 'common_verbose')
-        self._NAME_POLICY = 'soft'  # TBD: enable to set the NamePolicy from config file
-        self._options = [] # list of the options
+        self._NAME_POLICY = 'soft'      # TBD: enable to set the NamePolicy from config file
 
     #  LABEL
-    # ******************************************
+    #******************************************
 
     def addLabel(self, label, node_name):
         self._labelsMap[label] = node_name
@@ -60,10 +57,10 @@ class DialogData(object):
         return self._labelsMap
 
     #  ENTITY
-    # ******************************************
+    #******************************************
 
     def createEntity(self, entity_name):
-        # Return entity of a given entityName or None, if entity exists
+    # Return entity of a given entityName or None, if entity exists
         if entity_name not in self._entities:
             self._entities[entity_name] = EntityData()
             return self._entities[entity_name]
@@ -74,7 +71,7 @@ class DialogData(object):
         return self._entities
 
     #   INTENT
-    # ******************************************
+    #******************************************
 
     def createIntent(self, intent_name):
         # return intent of a given intentName (if it does not exist it creates an empty one )
@@ -83,11 +80,10 @@ class DialogData(object):
         return self._intents[intent_name]
 
     def getAllIntents(self):
-        # print (self._intents)
         return self._intents
 
     #   NODE
-    # ******************************************
+    #******************************************
 
     def createNode(self, node_name, domain_name=None):
         """ Creates empty node and links it to DialogData.NodeData, returns 0 if already exists
@@ -99,9 +95,9 @@ class DialogData(object):
             if domain_name not in self._domains:
                 self._domains[domain_name] = []
             # make sure the nodeName is remembered within the domain
-            # if node_name not in self._nodes[domain_name]:
+            #if node_name not in self._nodes[domain_name]:
             if node_name not in self._domains[domain_name]:
-                self._domains[domain_name].append(node_name)
+                    self._domains[domain_name].append(node_name)
 
         # Update nodes structure, if node is not there yet - add it
         if node_name not in self._nodes:
@@ -128,34 +124,24 @@ class DialogData(object):
             This is implementation of the second path through the dialogData.
         """
 
-        for node_name in self._nodes:  # for each node in the domain
+        for node_name in self._nodes: #for each node in the domain
             nodeData = self.getNode(node_name)
             if nodeData and nodeData._jumptoTarget:
                 label = nodeData._jumptoTarget
                 if label in self._labelsMap:
-                    node_target = self._labelsMap[label]
-                    nodeData._jumptoTarget = node_target
+                    node_target= self._labelsMap[label]
+                    nodeData._jumptoTarget= node_target
                     printf('INFO: Resolving cross reference label:%s -> node_name:%s)\n', label, node_name)
                 else:
                     printf('INFO: Label:%s not resolve, expecting tahat label is external node_name\n', label)
 
-    #   DOMAINS
-    # ******************************************
+#   DOMAINS
+#******************************************
     def getAllDomains(self):
         return self._domains
 
-    #   MENU
-    # ******************************************
-    def get_menu(self):
-        return self._menu
-
-    #   OPTIONS
-
-    def get_options(self):
-        return self._options
-
-    # createUnique ..
-    # ******************************************
+# createUnique ..
+#******************************************
     def createUniqueIntentName(self, intent_name):
         """
             Creates unique intent_name based on given string
@@ -164,14 +150,14 @@ class DialogData(object):
 
               :returns unique intent_name or None if not able to create
         """
-        # Normalize the string
-        unaccented_name = unicodedata.normalize('NFKD', intent_name).encode('ASCII', 'ignore')  # remove accents
-        unique_intent_name = toIntentName(self._NAME_POLICY, None, unaccented_name).decode('utf-8')
+        #Normalize the string
+        unaccented_name=unicodedata.normalize('NFKD', intent_name).encode('ASCII', 'ignore')  # remove accents
+        unique_intent_name = toIntentName( self._NAME_POLICY, None, unaccented_name).decode('utf-8')
         if unique_intent_name not in self._intents:
             return unique_intent_name
-        # try to modify by a number
+        #try to modify by a number
         for modifier in range(0, 10000):
-            new_unique_intent_name = unique_intent_name + repr(modifier)  # create a modified one
+            new_unique_intent_name=unique_intent_name+repr(modifier)  #create a modified one
             # Check if the name exists
             if new_unique_intent_name not in self._intents:
                 return new_unique_intent_name
@@ -185,18 +171,18 @@ class DialogData(object):
 
               :returns unique intent_name or None if not able to create
         """
-        # Normalize the string
-        unaccented_name = unicodedata.normalize('NFKD', entity_name).encode('ASCII', 'ignore')  # remove accents
+        #Normalize the string
+        unaccented_name=unicodedata.normalize('NFKD', entity_name).encode('ASCII', 'ignore')  # remove accents
         unique_entity_name = toIntentName(self._NAME_POLICY, None, unaccented_name).decode('utf-8')
         if unique_entity_name not in self._entities:
             return unique_entity_name
-        # try to modify by a number
+        #try to modify by a number
         for modifier in range(0, 10000):
-            new_unique_entity_name = unique_entity_name + repr(modifier)  # create a modified one
+            new_unique_entity_name= unique_entity_name + repr(modifier)  #create a modified one
             # Check if the name exists
             if new_unique_entity_name not in self._intents:
                 return new_unique_entity_name
-        # return None
+        return None
 
     def createUniqueNodeName(self, node_name):
         """
@@ -207,7 +193,7 @@ class DialogData(object):
               :returns unique node_name or None if not able to create
         """
         # Normalize the string
-        unaccented_name = unicodedata.normalize('NFKD', node_name).encode('ASCII', 'ignore')  # remove accents
+        unaccented_name=unicodedata.normalize('NFKD', node_name).encode('ASCII', 'ignore')  # remove accents
         unique_node_name = toIntentName(self._NAME_POLICY, None, unaccented_name).decode('utf-8').upper()
         if unique_node_name not in self._nodes:
             return unique_node_name
