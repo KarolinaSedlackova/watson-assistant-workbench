@@ -426,6 +426,7 @@ class XLSXHandler(object):
                 menu_workspace=menu_workspace.replace(ch,"")
         menu_workspace=menu_workspace.replace('u!', '!')
         name_of_menu = menu_workspace[6:menu_workspace.find(';')]
+        index_round_flat=menu_workspace[6]
         if 'flat' in name_of_menu: #CHECKING FLAT OR ROUND PARAMETR
             index_round_flat=(name_of_menu.index('flat'))
             round_flat="0"
