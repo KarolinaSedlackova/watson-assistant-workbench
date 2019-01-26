@@ -35,9 +35,9 @@ def createMP3File(dialogData, handler, config):
     for domain_name in domains:
         conditionData = handler.conditionsArray(dialogData, domains[domain_name])  # conditions
         audiableData=handler.convertDialogData(dialogData, domains[domain_name]) #outputs
+        # print(audiableData)
         num=1
         outputData = [item for line in audiableData for item in line]
-
         #create mp3s and put their name to txt file
         with open('cddf.txt', 'w') as cddf:
             for line, cond in itertools.izip_longest(outputData,conditionData):
@@ -45,23 +45,13 @@ def createMP3File(dialogData, handler, config):
                 tts = gTTS(text=line, lang='cs')
                 directory=getattr(config,'common_generated_mp3')[0]
                 tts.save(directory+'/'+name+'.mp3')
-                if cond== None:
-                    cddf.write(','+name)
-                elif cond == '#E_R':
-                    cddf.write('\n'+'1_'+name)
-                elif cond == '#E_L':
-                    cddf.write('\n'+'2_'+name)
-                elif cond == '#E_U':
-                    cddf.write ('\n'+'3_'+name)
-                elif cond == '#E_D':
-                    cddf.write('\n'+'4_'+name)
-                else:
-                    pass
+                num += 1
+            for item in dialogData.get_reactive_outputs():
+                cddf.write("const PROGMEM int reactive_MultiOp1[] = {5, 0, "+item+'\n')
 
-                num+= 1
             # ADD MENU TO TEXT FILE
             menu=dialogData.get_menu()
-            cddf.write('\n'+'const PROGMEM int '+menu[0])
+            cddf.write('const PROGMEM int '+menu[0]+'\n')
             cddf.close()
 
 if __name__ == '__main__':

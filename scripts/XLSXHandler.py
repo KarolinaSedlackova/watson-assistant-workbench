@@ -54,13 +54,16 @@ class XLSXHandler(object):
     def __init__(self, config):
         self._blocks = []  # internal representation of XLS, list of blocks, (block are the lines separated by empty line)
         self._dialogData = DialogData(config)  # internal representation of the workspace
+        self._nodeData = NodeData()
         self._config = config  # we need config to get NAME_POLICY, verbosity,..
         self._VERBOSE = hasattr(config, 'common_verbose')
         self._NAME_POLICY = 'soft'  # TBD: enable to set the NamePolicy from config file
-        self.menu_reacts = []
+        self.menu_reacts = []   #item from dialog data
         self.menu_blocks = []  # menu blocks
         self._numerized_outputs = []  # create numerized mp3
-        self._num_of_options=[]
+        self._num_of_options=[]     #number of options in menu
+        self._cond_to_menu=[]
+
 
     def getBlocks(self):
         return self._blocks
@@ -142,8 +145,8 @@ class XLSXHandler(object):
             else:
                 return
         self._blocks.append((domain, prefix, block))
-        # print(self._blocks)
-        # print(len(self._blocks))
+        #print(len(self._blocks))
+
 
     def __is_condition_block(self, block):
         """ Returns true if first cell contains X_PLACEHOLDER
@@ -166,6 +169,17 @@ class XLSXHandler(object):
         """
         label = None
         firstCell = block[0][0]  # firstCell is a header, condition
+        if firstCell.startswith("!"):
+            self.menu_blocks.append(firstCell)
+        if firstCell.startswith("#E_R"):
+            self._cond_to_menu.append("1")
+        elif firstCell.startswith("#E_L"):
+            self._cond_to_menu.append("2")
+        elif firstCell.startswith("#E_U"):
+            self._cond_to_menu.append("3")
+        elif firstCell.startswith("#E_D"):
+            self._cond_to_menu.append("4")
+
         if firstCell.startswith(u':') and len(block[0][0]) > 1:
             label = firstCell[1:]
             if self._dialogData.isLabel(label):
@@ -193,15 +207,12 @@ class XLSXHandler(object):
         for domain, prefix, block in self._blocks:  # For each block
             # Validity check of parameters
             if not block or not isinstance(block[0], tuple) or not block[0][0]:
-                printf('WARNING: First cell of the data block does not contain any data. (domain=%s, prefix=%s)\n',
-                       domain, prefix)
                 continue
-
+            if block[0][1] and not block[0][0]:
+                continue
             # separate label, strip it from block
             label = self.__separate_label_from_block(block)
-
             firstCell = block[0][0]
-
             # Block has header if it starts only with column 1 cell (no other cells)!
             #   It can not be implicit intent definition as it need an output, otherwise noone coud referr to it
             blockHasHeader = self.__is_header(block)
@@ -257,6 +268,7 @@ class XLSXHandler(object):
                 nodeData.addRawOutput(row[1:], self._dialogData.getLabelsMap())
             else:
                 eprintf('Warning: Format error, no output defined for the condition :%s', row)
+
 
     def __handle_condition_block(self, block, domain, label):
         """ Handles simple pair condition-output,
@@ -336,9 +348,9 @@ class XLSXHandler(object):
 
         startsWithHeader = block[0][0].startswith(u'#')  # is header?
         if block[0][0].startswith('!Menu') and not block[0][1]:
-            self.menu_blocks.append(block[0][0])
+            pass
         elif block[0][0] == '!!Menu' and not block[0][1]:
-            self.menu_blocks.append(block[0][0])
+            pass
         elif not startsWithHeader and not block[0][1]:
             eprintf('ERROR: Internal error. __handle_intent_block handling ConditionBlock : %s\n', block[0])
             exit()
@@ -372,6 +384,7 @@ class XLSXHandler(object):
                 intentData.addExample(row[0])  # Collect intent definition
             if row[1]:
                 if block[0][0].startswith('!Menu') and not first_output:
+                    print(row[1])
                     continue
                 elif not first_output:
                     eprintf('ERROR: Format error. Adjacent outputs are not in a sigle block : %s\n', block[0])
@@ -386,15 +399,18 @@ class XLSXHandler(object):
         blocks = self._blocks
         menu = self.menu_blocks
         num_of_options=self._num_of_options
+        complete_list_of_all_outputs=self._dialogData._all_menu_outputs
         # CREATING A LIST OF A SECOND COLUMN IN EXCEL SHEET
         for block in blocks:
             if block[2][0][1] and len(block[2]) == 1:
                 outputs.append(block[2][0][1])
+                complete_list_of_all_outputs.append(block[2][0][1])
                 if block[2][0][1] and not block[2][0][0]:
                     num_of_options.append(len(block[2]))
             elif len(block[2]) > 1:
                 for i in range(len(block[2])):
                     outputs.append(block[2][i][1])
+                    complete_list_of_all_outputs.append(block[2][i][1])
                     if block[2][0][1] and not block[2][0][0]:
                         num_of_options.append(len(block[2]))
         # FINDING THE ITEMS OF THE MENU
@@ -415,6 +431,25 @@ class XLSXHandler(object):
                 menu.insert(-1,num_of_options[0])
                 num_of_options.pop(0)
         return outputs
+
+    # create reactive pattern for Arduino
+    def create_reactive(self,blocks):
+        conditions=self._cond_to_menu
+        numerized_outputs=self._numerized_outputs
+        lenghts=[]
+        res= self._dialogData._reactive_outputs
+        # {5, 0, _cond_to_menu, numerized outputs, delka outputu}
+        for item in numerized_outputs:
+            if item in self.menu_blocks:
+                index=numerized_outputs.index(item)
+                del numerized_outputs[index::]
+        for block in blocks:
+            if block [2][0][0] and not str(block [2][0][0]).startswith("!"):
+                lenghts.append(len(block[2]))
+        for i in range(len(conditions)-1):
+            res.append((conditions[i])+", "+str(numerized_outputs[i])+", "+str(lenghts[i]))
+            if lenghts[i] != 1:
+                del numerized_outputs[i:i+lenghts[i]-1]
 
     def menu_handling(self, block):
         numerized_outputs = self.create_numerized_outputs()
@@ -455,6 +490,9 @@ class XLSXHandler(object):
         # THE FINAL LOOK OF MENU FOR ARDUINO
         final_menu=name_of_menu+"[]"+'{4, '+str(param1)+', '+'10'+', '+timeout+', '+menu_workspace+'}'
         self._dialogData._menu.append(final_menu)
+        self.create_reactive(block)
+        # print(self._dialogData.getAllDomains())
+
 
 
 

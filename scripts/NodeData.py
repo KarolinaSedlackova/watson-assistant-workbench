@@ -46,11 +46,8 @@ class NodeData(object):
     def getCondition(self):
         return self._node_condition
 
-
-    # def getConditionToArr(self):
-    #     conditions = []
-    #     conditions.append(self._node_condition)
-    #     return conditions
+    def get_cond_to_menu(self):
+        return self._cond_to_menu
 
     def addChannelOutput(self, channelName, channelOutput):
         if channelName not in self._channels:

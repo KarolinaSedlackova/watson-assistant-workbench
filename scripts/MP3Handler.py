@@ -35,13 +35,11 @@ class MP3Handler(object):
     def convertDialogData(self, dialogData, nodes):
         """ Convert Dialog Data of a single domain into mp3 and return pointer to the root XML element. """
         nodeArray = []
-        for node_name in nodes: #for each node in the domain
-            nodeData = dialogData.getNode(node_name)
+        nodeData = dialogData.getAllMenuOutputs()
            # nodeData.encode('utf-8')
-            if nodeData == None:
-                printf("WARNING: Not found a definition for a node name %s \n", node_name)
-                continue
-            nodeArray.append(nodeData.getRawOutputs())
+        if nodeData == None:
+            printf("WARNING: Not found a definition for a node name %s \n", nodeData)
+        nodeArray.append(nodeData)
         return nodeArray
 
     def conditionsArray(self, dialogData, nodes):

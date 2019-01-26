@@ -19,6 +19,8 @@ from NodeData import NodeData
 import unicodedata, unidecode
 from wawCommons import printf, eprintf, toIntentName
 
+# from MenuData import MenuData
+
 X_PLACEHOLDER = u'&lt;x&gt;'
 
 
@@ -35,7 +37,7 @@ class DialogData(object):
 
         self._entities = {}  # key: entity name, value: list of all Dialog entity options; entities is a flat list over all the domains
         self._intents = {}  # key: intent name, value: IntentData object; intents is a flat list over all the domains
-
+        self._all_menu_outputs=[]
         # nodes are grouped based on domain
         self._nodes = {}  # key: node name, value: list of all associated dialog nodes
         self._domains = {}  # key: domain name, value: list of all associated nodes with the given domain
@@ -44,6 +46,7 @@ class DialogData(object):
         self._VERBOSE = hasattr(config, 'common_verbose')
         self._NAME_POLICY = 'soft'  # TBD: enable to set the NamePolicy from config file
         self._options = [] # list of the options
+        self._reactive_outputs = []
 
     #  LABEL
     # ******************************************
@@ -83,8 +86,11 @@ class DialogData(object):
         return self._intents[intent_name]
 
     def getAllIntents(self):
-        # print (self._intents)
         return self._intents
+
+
+    def getAllMenuOutputs(self):
+        return self._all_menu_outputs
 
     #   NODE
     # ******************************************
@@ -116,6 +122,7 @@ class DialogData(object):
         if node_name not in self._nodes:
             return None
         return self._nodes[node_name]
+
 
     def getAllNodes(self):
         """  @:returns list of all nodes
@@ -218,3 +225,6 @@ class DialogData(object):
             if new_unique_node_name not in self._nodes:
                 return new_unique_node_name
         return None
+
+    def get_reactive_outputs(self):
+        return self._reactive_outputs
