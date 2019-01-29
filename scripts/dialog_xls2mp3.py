@@ -47,11 +47,11 @@ def createMP3File(dialogData, handler, config):
                 tts.save(directory+'/'+name+'.mp3')
                 num += 1
             for item in dialogData.get_reactive_outputs():
-                cddf.write("const PROGMEM int reactive_MultiOp1[] = {5, 0, "+item+'\n')
-
+                cddf.write("const PROGMEM int reactive_MultiOp1[] = {5, 0, "+item+'}\n')
             # ADD MENU TO TEXT FILE
-            menu=dialogData.get_menu()
-            cddf.write('const PROGMEM int '+menu[0]+'\n')
+            menus=dialogData.get_all_menu()
+            for menu in menus:
+                cddf.write('const PROGMEM int '+str(menu)+'\n')
             cddf.close()
 
 if __name__ == '__main__':

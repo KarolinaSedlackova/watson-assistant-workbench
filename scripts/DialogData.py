@@ -45,7 +45,7 @@ class DialogData(object):
         self._config = config  # we need config to get NAME_POLICY, verbosity,..
         self._VERBOSE = hasattr(config, 'common_verbose')
         self._NAME_POLICY = 'soft'  # TBD: enable to set the NamePolicy from config file
-        self._options = [] # list of the options
+        self._all_menu = [] # list of the all menu
         self._reactive_outputs = []
 
     #  LABEL
@@ -158,8 +158,8 @@ class DialogData(object):
 
     #   OPTIONS
 
-    def get_options(self):
-        return self._options
+    def get_all_menu(self):
+        return self._all_menu
 
     # createUnique ..
     # ******************************************
@@ -227,4 +227,5 @@ class DialogData(object):
         return None
 
     def get_reactive_outputs(self):
+        # print(self._reactive_outputs)
         return self._reactive_outputs

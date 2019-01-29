@@ -45,6 +45,7 @@ import DialogData as Dialog
 from DialogData import DialogData
 from itertools import izip_longest
 from NodeData import NodeData
+import more_itertools
 
 
 class XLSXHandler(object):
@@ -141,7 +142,7 @@ class XLSXHandler(object):
             if block[0][1]:
                 self.menu_reacts.append(block[0][1])
             elif block[0][2]:
-                self._dialogData._options.append(block[0][2])
+               pass
             else:
                 return
         self._blocks.append((domain, prefix, block))
@@ -170,7 +171,8 @@ class XLSXHandler(object):
         label = None
         firstCell = block[0][0]  # firstCell is a header, condition
         if firstCell.startswith("!"):
-            self.menu_blocks.append(firstCell)
+            pass
+            # self.menu_blocks.append(firstCell)
         if firstCell.startswith("#E_R"):
             self._cond_to_menu.append("1")
         elif firstCell.startswith("#E_L"):
@@ -392,6 +394,23 @@ class XLSXHandler(object):
                 else:
                     nodeData.addRawOutput(row[1:], self._dialogData.getAllEntities())
                     print(row[1])
+    def concatenate_menus_to_list(self):
+        # find menu in blocks and make list of them
+        numerized_outputs=self._numerized_outputs
+        blocks = self._blocks
+        for block in blocks:
+            if block[2][0][1] and len(block[2]) == 1:
+                if not block[2][0][0]:
+                    self._dialogData._menu.append(self.menu_blocks[0])
+                    self.menu_blocks.pop(0)
+                    self._dialogData._menu.append(len(block[2]))
+            if block[2][0][0] and not block[2][0][1]:
+                self._dialogData._menu.append(block[2][0][0])
+            elif len(block[2]) > 1:
+                if not block [2][0][0]:
+                    self._dialogData._menu.append(self.menu_blocks[0])
+                    self.menu_blocks.pop(0)
+                    self._dialogData._menu.append(len(block[2]))
 
     def create_numerized_outputs(self):
         menu_reacts=self.menu_reacts
@@ -407,32 +426,33 @@ class XLSXHandler(object):
                 complete_list_of_all_outputs.append(block[2][0][1])
                 if block[2][0][1] and not block[2][0][0]:
                     num_of_options.append(len(block[2]))
+                    # print(len(block[2]))
+            # if block[2][0][0] and not block[2][0][1]:
+                # print(block[2][0][0])
             elif len(block[2]) > 1:
                 for i in range(len(block[2])):
                     outputs.append(block[2][i][1])
                     complete_list_of_all_outputs.append(block[2][i][1])
-                    if block[2][0][1] and not block[2][0][0]:
-                        num_of_options.append(len(block[2]))
+                if block[2][0][1] and not block[2][0][0]:
+                    num_of_options.append(len(block[2]))
+                    # print(len(block[2]))
+
         # FINDING THE ITEMS OF THE MENU
         index_of_match = [x for x,item in enumerate(outputs) if item in menu_reacts]
-        # REMOVING UNUSED NUMBER OF OPTIONS
-        for item in num_of_options:
-            if item==num_of_options.count(item):
-                deleted_num=num_of_options.count(item)-1
-                for i in range(deleted_num):
-                    num_of_options.pop(i)
-        # ENUMERATING THE OUTPUTS
+
         for n, item in enumerate(outputs):
             num = str(n + 1).zfill(3)
             outputs[n] = num
             # ADDING THE ENUMERATED OUTPUTS TO MENU
             if n in index_of_match:
-                menu.insert(-1,num)
-                menu.insert(-1,num_of_options[0])
+                menu.append(num)
+                # menu.insert(-1,num_of_options[0])
                 num_of_options.pop(0)
+
+        self.concatenate_menus_to_list()
         return outputs
 
-    # create reactive pattern for Arduino
+
     def create_reactive(self,blocks):
         conditions=self._cond_to_menu
         numerized_outputs=self._numerized_outputs
@@ -453,45 +473,48 @@ class XLSXHandler(object):
 
     def menu_handling(self, block):
         numerized_outputs = self.create_numerized_outputs()
-        menu = self.menu_blocks
+        menu = self._dialogData.get_menu()
+        # divide all menus to individual lists
+        menus=list(more_itertools.split_after(menu,lambda s: s == u'!!Menu'))
         # CREATING A WORKSPACE FOR MENU
-        menu_workspace=str(menu)
-        param1 = 0
-        for ch in ['[',']',"'"]:
-            if ch in menu_workspace:
-                menu_workspace=menu_workspace.replace(ch,"")
-        menu_workspace=menu_workspace.replace('u!', '!')
-        name_of_menu = menu_workspace[6:menu_workspace.find(';')]
-        index_round_flat=6
-        if 'auto'.upper() in name_of_menu:
-            param1+=0x01
-        if 'intro'.upper() in name_of_menu:
-            param1+=0x02
-        if 'flat' in name_of_menu: #CHECKING FLAT OR ROUND PARAMETR
-            index_round_flat=(name_of_menu.index('flat'))
-        elif 'round' in name_of_menu:
-            index_round_flat =name_of_menu.index('round')
-            param1+=0x10
-        starting_index=6+len(name_of_menu)+1
-        name_of_menu=name_of_menu[:index_round_flat].strip()  # DEFINING A NAME OF THE MENU
-        menu_workspace=menu_workspace[starting_index::]
-        order=menu_workspace[6:menu_workspace.index(';')]
-        # CHECKING AN ORDER OF THE MENU
-        if "last" in order:
-            param1+=0x04
-        if "first" and "last" not in order:
-            param1+=0x08
-        starting_index=6+len(order)+1
-        menu_workspace=menu_workspace[starting_index::]
-        timeout=menu_workspace[8:menu_workspace.index(',')]       # DEFINING TIMEOUT OF THE MENU
-        starting_index=8+len(timeout)+1
-        ending_index=menu_workspace.index("!!Menu")
-        menu_workspace=menu_workspace[starting_index:ending_index-2]
-        # THE FINAL LOOK OF MENU FOR ARDUINO
-        final_menu=name_of_menu+"[]"+'{4, '+str(param1)+', '+'10'+', '+timeout+', '+menu_workspace+'}'
-        self._dialogData._menu.append(final_menu)
-        self.create_reactive(block)
-        # print(self._dialogData.getAllDomains())
+        for menu in menus:
+            menu_workspace=str(menu)
+            param1 = 0
+            for ch in ['[',']',"'"]:
+                if ch in menu_workspace:
+                    menu_workspace=menu_workspace.replace(ch,"")
+            menu_workspace=menu_workspace.replace('u!', '!')
+            name_of_menu = menu_workspace[6:menu_workspace.find(';')]
+            index_round_flat=6
+            if 'auto'.upper() in name_of_menu:
+                param1+=0x01
+            if 'intro'.upper() in name_of_menu:
+                param1+=0x02
+            if 'flat' in name_of_menu: #CHECKING FLAT OR ROUND PARAMETR
+                index_round_flat=(name_of_menu.index('flat'))
+            elif 'round' in name_of_menu:
+                index_round_flat =name_of_menu.index('round')
+                param1+=0x10
+            starting_index=6+len(name_of_menu)+1
+            name_of_menu=name_of_menu[:index_round_flat].strip()  # DEFINING A NAME OF THE MENU
+            menu_workspace=menu_workspace[starting_index::]
+            order=menu_workspace[6:menu_workspace.index(';')]
+            # CHECKING AN ORDER OF THE MENU
+            if "last" in order:
+                param1+=0x04
+            if "first" and "last" not in order:
+                param1+=0x08
+            starting_index=6+len(order)+1
+            menu_workspace=menu_workspace[starting_index::]
+            timeout=menu_workspace[8:menu_workspace.index(',')]       # DEFINING TIMEOUT OF THE MENU
+            starting_index=8+len(timeout)+1
+            ending_index=menu_workspace.index("!!Menu")
+            menu_workspace=menu_workspace[starting_index:ending_index-2]
+            # THE FINAL LOOK OF MENU FOR ARDUINO
+            final_menu=name_of_menu+"[]"+'{4, '+str(param1)+', '+'10'+', '+timeout+', '+menu_workspace+'}'
+            self._dialogData._all_menu.append(final_menu)
+            self.create_reactive(block)
+
 
 
 
