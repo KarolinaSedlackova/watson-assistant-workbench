@@ -3,3 +3,5 @@ lxml
 openpyxl
 requests
 unidecode
+more_itertools
+gtts
