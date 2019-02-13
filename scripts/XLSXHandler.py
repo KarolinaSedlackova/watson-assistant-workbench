@@ -49,7 +49,7 @@ import more_itertools
 
 
 class XLSXHandler(object):
-    """ Converts Excel spreadsheet forom multiple fles to an internal data representation in DialogData.
+    """ Converts Excel spreadsheet from multiple files to an internal data representation in DialogData.
     """
 
     def __init__(self, config):
@@ -146,7 +146,6 @@ class XLSXHandler(object):
             else:
                 return
         self._blocks.append((domain, prefix, block))
-        #print(len(self._blocks))
 
 
     def __is_condition_block(self, block):
@@ -171,11 +170,13 @@ class XLSXHandler(object):
         label = None
         firstCell = block[0][0]  # firstCell is a header, condition
         if firstCell.startswith("!"):
-            pass
+            if "!Def" in firstCell:
+                self._dialogData._arduino_definitions.append(firstCell[1::])
+            # print firstCell
             # self.menu_blocks.append(firstCell)
-        if firstCell.startswith("#E_R"):
+        if firstCell.startswith("#E_L"):
             self._cond_to_menu.append("1")
-        elif firstCell.startswith("#E_L"):
+        elif firstCell.startswith("#E_R"):
             self._cond_to_menu.append("2")
         elif firstCell.startswith("#E_U"):
             self._cond_to_menu.append("3")
@@ -349,10 +350,10 @@ class XLSXHandler(object):
         """
 
         startsWithHeader = block[0][0].startswith(u'#')  # is header?
-        if block[0][0].startswith('!Menu') and not block[0][1]:
+        if block[0][0].startswith('!') and not block[0][1]:
             pass
-        elif block[0][0] == '!!Menu' and not block[0][1]:
-            pass
+        # elif block[0][0] == '!!Menu' and not block[0][1]:
+        #     pass
         elif not startsWithHeader and not block[0][1]:
             eprintf('ERROR: Internal error. __handle_intent_block handling ConditionBlock : %s\n', block[0])
             exit()
@@ -405,15 +406,17 @@ class XLSXHandler(object):
                     self.menu_blocks.pop(0)
                     self._dialogData._menu.append(len(block[2]))
             if block[2][0][0] and not block[2][0][1]:
-                self._dialogData._menu.append(block[2][0][0])
+                if '!Menu' in block[2][0][0]:
+                    self._dialogData._menu.append(block[2][0][0])
             elif len(block[2]) > 1:
                 if not block [2][0][0]:
                     self._dialogData._menu.append(self.menu_blocks[0])
                     self.menu_blocks.pop(0)
                     self._dialogData._menu.append(len(block[2]))
-
+        # print self._dialogData.get_menu()
     def create_numerized_outputs(self):
         menu_reacts=self.menu_reacts
+        # print menu_reacts
         outputs = self._numerized_outputs
         blocks = self._blocks
         menu = self.menu_blocks
@@ -426,20 +429,17 @@ class XLSXHandler(object):
                 complete_list_of_all_outputs.append(block[2][0][1])
                 if block[2][0][1] and not block[2][0][0]:
                     num_of_options.append(len(block[2]))
-                    # print(len(block[2]))
-            # if block[2][0][0] and not block[2][0][1]:
-                # print(block[2][0][0])
+
             elif len(block[2]) > 1:
                 for i in range(len(block[2])):
                     outputs.append(block[2][i][1])
                     complete_list_of_all_outputs.append(block[2][i][1])
                 if block[2][0][1] and not block[2][0][0]:
                     num_of_options.append(len(block[2]))
-                    # print(len(block[2]))
 
         # FINDING THE ITEMS OF THE MENU
+        # print outputs
         index_of_match = [x for x,item in enumerate(outputs) if item in menu_reacts]
-
         for n, item in enumerate(outputs):
             num = str(n + 1).zfill(3)
             outputs[n] = num
@@ -449,41 +449,61 @@ class XLSXHandler(object):
                 # menu.insert(-1,num_of_options[0])
                 num_of_options.pop(0)
 
+        # print outputs
         self.concatenate_menus_to_list()
         return outputs
 
-
-    def create_reactive(self,blocks):
-        conditions=self._cond_to_menu
-        numerized_outputs=self._numerized_outputs
-        lenghts=[]
-        res= self._dialogData._reactive_outputs
-        # {5, 0, _cond_to_menu, numerized outputs, delka outputu}
-        for item in numerized_outputs:
-            if item in self.menu_blocks:
-                index=numerized_outputs.index(item)
-                del numerized_outputs[index::]
-        for block in blocks:
-            if block [2][0][0] and not str(block [2][0][0]).startswith("!"):
-                lenghts.append(len(block[2]))
-        for i in range(len(conditions)-1):
-            res.append((conditions[i])+", "+str(numerized_outputs[i])+", "+str(lenghts[i]))
-            if lenghts[i] != 1:
-                del numerized_outputs[i:i+lenghts[i]-1]
+    def create_reactive(self):
+        numerized_outputs = self._numerized_outputs
+        conditions = self._cond_to_menu
+        res=[]
+        index=0
+        num=0
+        for n,block in enumerate(self._blocks):
+            if block[2][0][0] and block[2][0][0].startswith("!"):
+                if "!Menu" in block[2][0][0]:
+                    break
+                res.append("CUT")
+            if len(block[2])==1:
+                if block[2][0][1] and not "!Menu" in block[2][0][0]:
+                    res.append(conditions[num])
+                    res.append(numerized_outputs[index])
+                    res.append(len(block[2]))
+                    index+=1
+                    num+=1
+            else:
+                for i in range (len(block[2])):
+                    if block[2][i][0]:
+                        res.append(conditions[num])
+                        res.append(numerized_outputs[index])
+                        res.append(len(block[2]))
+                        index+=len(block[2])
+                        num+=1
+        reactives = list(more_itertools.split_at(res, lambda s: s == 'CUT'))
+        reactives=[x for x in reactives if len(x)>1]
+        print len(reactives)
+        for react in reactives:
+            self._dialogData._reactive_outputs.append(react)
+        print self._dialogData.get_reactive_outputs()
 
     def menu_handling(self, block):
         numerized_outputs = self.create_numerized_outputs()
         menu = self._dialogData.get_menu()
+        # print menu
         # divide all menus to individual lists
-        menus=list(more_itertools.split_after(menu,lambda s: s == u'!!Menu'))
+        menus = list(more_itertools.split_after(menu, lambda s: s == u'!!Menu'))
+        # print menus
         # CREATING A WORKSPACE FOR MENU
         for menu in menus:
+            # print menu
             menu_workspace=str(menu)
+            # print menu_workspace
             param1 = 0
             for ch in ['[',']',"'"]:
                 if ch in menu_workspace:
                     menu_workspace=menu_workspace.replace(ch,"")
             menu_workspace=menu_workspace.replace('u!', '!')
+            # print menu_workspace
             name_of_menu = menu_workspace[6:menu_workspace.find(';')]
             index_round_flat=6
             if 'auto'.upper() in name_of_menu:
@@ -513,7 +533,18 @@ class XLSXHandler(object):
             # THE FINAL LOOK OF MENU FOR ARDUINO
             final_menu=name_of_menu+"[]"+'{4, '+str(param1)+', '+'10'+', '+timeout+', '+menu_workspace+'}'
             self._dialogData._all_menu.append(final_menu)
-            self.create_reactive(block)
+            # self.create_reactive()
+
+    def Newtons_third_law(self):
+        blocks=self._blocks
+        akce_a_reakce=[]
+        for block in blocks:
+            if block [2][0][0] and block[2][0][0].startswith("!Action"):
+                akce_a_reakce.append(block[2][0][0])
+            elif block [2][0][0] and "!Reac" in block[2][0][0]:
+                akce_a_reakce.append(block[2][0][0])
+
+        # print akce_a_reakce
 
 
 

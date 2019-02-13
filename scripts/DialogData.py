@@ -47,6 +47,7 @@ class DialogData(object):
         self._NAME_POLICY = 'soft'  # TBD: enable to set the NamePolicy from config file
         self._all_menu = [] # list of the all menu
         self._reactive_outputs = []
+        self._arduino_definitions = []
 
     #  LABEL
     # ******************************************
@@ -159,6 +160,7 @@ class DialogData(object):
     #   OPTIONS
 
     def get_all_menu(self):
+        # print self._all_menu
         return self._all_menu
 
     # createUnique ..
@@ -229,3 +231,6 @@ class DialogData(object):
     def get_reactive_outputs(self):
         # print(self._reactive_outputs)
         return self._reactive_outputs
+
+    def get_arduino_definitions(self):
+        return self._arduino_definitions
