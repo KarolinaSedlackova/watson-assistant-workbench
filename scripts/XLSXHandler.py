@@ -64,6 +64,7 @@ class XLSXHandler(object):
         self._numerized_outputs = []  # create numerized mp3
         self._num_of_options=[]     #number of options in menu
         self._cond_to_menu=[]
+        self._dictionary={}
 
 
     def getBlocks(self):
@@ -168,21 +169,14 @@ class XLSXHandler(object):
             :returns label or None (if no label was found )
         """
         label = None
+        test_val = []
         firstCell = block[0][0]  # firstCell is a header, condition
         if firstCell.startswith("!"):
             if "!Def" in firstCell:
-                self._dialogData._arduino_definitions.append(firstCell[1::])
-            # print firstCell
-            # self.menu_blocks.append(firstCell)
-        if firstCell.startswith("#E_L"):
-            self._cond_to_menu.append("1")
-        elif firstCell.startswith("#E_R"):
-            self._cond_to_menu.append("2")
-        elif firstCell.startswith("#E_U"):
-            self._cond_to_menu.append("3")
-        elif firstCell.startswith("#E_D"):
-            self._cond_to_menu.append("4")
-
+                # print type(firstCell)
+                self._dialogData._arduino_definitions.append(firstCell)
+            if "!Act" in firstCell:
+                self._dialogData._arduino_definitions.append(firstCell)
         if firstCell.startswith(u':') and len(block[0][0]) > 1:
             label = firstCell[1:]
             if self._dialogData.isLabel(label):
@@ -481,7 +475,7 @@ class XLSXHandler(object):
                         num+=1
         reactives = list(more_itertools.split_at(res, lambda s: s == 'CUT'))
         reactives=[x for x in reactives if len(x)>1]
-        print len(reactives)
+        # print len(reactives)
         for react in reactives:
             self._dialogData._reactive_outputs.append(react)
         print self._dialogData.get_reactive_outputs()
@@ -535,16 +529,23 @@ class XLSXHandler(object):
             self._dialogData._all_menu.append(final_menu)
             # self.create_reactive()
 
-    def Newtons_third_law(self):
+    def definition_handler(self):
         blocks=self._blocks
-        akce_a_reakce=[]
+        keys = []
+        vals = []
+        dictionary = self._dictionary
+        definitions = self._dialogData.get_arduino_definitions()
+        for item in definitions:
+            lst = filter(None, re.split("[= ]", item))
+            if '#' in lst[1]:
+                keys.append(lst[1])
+                vals.append(int(lst[2]))
+        dictionary = dict(zip(keys, vals))
         for block in blocks:
-            if block [2][0][0] and block[2][0][0].startswith("!Action"):
-                akce_a_reakce.append(block[2][0][0])
-            elif block [2][0][0] and "!Reac" in block[2][0][0]:
-                akce_a_reakce.append(block[2][0][0])
+            if block[2][0][0] in dictionary.keys():
+                self._cond_to_menu.append(dictionary[block[2][0][0]])
 
-        # print akce_a_reakce
+
 
 
 
