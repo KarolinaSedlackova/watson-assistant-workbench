@@ -66,7 +66,6 @@ class XLSXHandler(object):
         self._cond_to_menu=[]
         self._dictionary={}
 
-
     def getBlocks(self):
         return self._blocks
 
@@ -176,7 +175,11 @@ class XLSXHandler(object):
                 # print type(firstCell)
                 self._dialogData._arduino_definitions.append(firstCell)
             if "!Act" in firstCell:
-                self._dialogData._arduino_definitions.append(firstCell)
+                self._dialogData._arduino_actions.append(firstCell[9::])
+            if "!Fold" in firstCell:
+                self._dialogData.folder.append(firstCell)
+        if not firstCell.startswith("!"):
+            self._dialogData.folder.append(".")
         if firstCell.startswith(u':') and len(block[0][0]) > 1:
             label = firstCell[1:]
             if self._dialogData.isLabel(label):
@@ -454,7 +457,7 @@ class XLSXHandler(object):
         index=0
         num=0
         for n,block in enumerate(self._blocks):
-            if block[2][0][0] and block[2][0][0].startswith("!"):
+            if block[2][0][0] and block[2][0][0].startswith("!") and not "!Folder" in block[2][0][0]:
                 if "!Menu" in block[2][0][0]:
                     break
                 res.append("CUT")
@@ -465,6 +468,8 @@ class XLSXHandler(object):
                     res.append(len(block[2]))
                     index+=1
                     num+=1
+                if block[2][0][0].startswith("!Folder"):
+                    res.append(str(block[2][0][0][8::]))
             else:
                 for i in range (len(block[2])):
                     if block[2][i][0]:
@@ -473,31 +478,28 @@ class XLSXHandler(object):
                         res.append(len(block[2]))
                         index+=len(block[2])
                         num+=1
+        # print (res)
         reactives = list(more_itertools.split_at(res, lambda s: s == 'CUT'))
         reactives=[x for x in reactives if len(x)>1]
-        # print len(reactives)
+
         for react in reactives:
+            # print react
             self._dialogData._reactive_outputs.append(react)
-        print self._dialogData.get_reactive_outputs()
+
 
     def menu_handling(self, block):
         numerized_outputs = self.create_numerized_outputs()
         menu = self._dialogData.get_menu()
-        # print menu
         # divide all menus to individual lists
         menus = list(more_itertools.split_after(menu, lambda s: s == u'!!Menu'))
-        # print menus
         # CREATING A WORKSPACE FOR MENU
         for menu in menus:
-            # print menu
             menu_workspace=str(menu)
-            # print menu_workspace
             param1 = 0
             for ch in ['[',']',"'"]:
                 if ch in menu_workspace:
                     menu_workspace=menu_workspace.replace(ch,"")
             menu_workspace=menu_workspace.replace('u!', '!')
-            # print menu_workspace
             name_of_menu = menu_workspace[6:menu_workspace.find(';')]
             index_round_flat=6
             if 'auto'.upper() in name_of_menu:
@@ -527,7 +529,6 @@ class XLSXHandler(object):
             # THE FINAL LOOK OF MENU FOR ARDUINO
             final_menu=name_of_menu+"[]"+'{4, '+str(param1)+', '+'10'+', '+timeout+', '+menu_workspace+'}'
             self._dialogData._all_menu.append(final_menu)
-            # self.create_reactive()
 
     def definition_handler(self):
         blocks=self._blocks
@@ -544,13 +545,3 @@ class XLSXHandler(object):
         for block in blocks:
             if block[2][0][0] in dictionary.keys():
                 self._cond_to_menu.append(dictionary[block[2][0][0]])
-
-
-
-
-
-
-
-
-
-

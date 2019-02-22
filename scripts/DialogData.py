@@ -48,6 +48,8 @@ class DialogData(object):
         self._all_menu = [] # list of the all menu
         self._reactive_outputs = []
         self._arduino_definitions = []
+        self._arduino_actions = []
+        self.folder=[]
 
     #  LABEL
     # ******************************************
@@ -232,5 +234,11 @@ class DialogData(object):
         # print(self._reactive_outputs)
         return self._reactive_outputs
 
+    def get_actions(self):
+        return self._arduino_actions
+
     def get_arduino_definitions(self):
         return self._arduino_definitions
+
+    def get_folder(self):
+        return self.folder

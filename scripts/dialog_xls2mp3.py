@@ -22,7 +22,9 @@ from wawCommons import printf
 from XLSXHandler import XLSXHandler
 from MP3Handler import MP3Handler
 from wawCommons import printf, eprintf
+from FolderHandler import FolderHandler
 from gtts import gTTS
+import re
 
 
 
@@ -33,20 +35,40 @@ def createMP3File(dialogData, handler, config):
            print('Created new directory ' + getattr(config, 'common_generated_mp3')[0])
     domains = dialogData.getAllDomains()
     for domain_name in domains:
-        conditionData = handler.conditionsArray(dialogData, domains[domain_name])  # conditions
         audiableData=handler.convertDialogData(dialogData, domains[domain_name]) #outputs
         # print(audiableData)
         num=1
+        i=1
         outputData = [item for line in audiableData for item in line]
         #create mp3s and put their name to txt file
         with open('cddf.txt', 'w') as cddf:
-            for line, cond in itertools.izip_longest(outputData,conditionData):
+            for line in outputData:
+                i+=1
                 name = '{0:03}'.format(num)
                 tts = gTTS(text=line, lang='cs')
                 directory=getattr(config,'common_generated_mp3')[0]
+                if dialogData.folder:
+                    in_folder=dialogData.folder.index("!!Folder")
+                    if i<=in_folder:
+                        directory=directory+'/'+dialogData.folder[0][8::]
+                        if dialogData.folder[i]=="!!Folder":
+                            del(dialogData.folder[0:i+1])
+                            i = 1
+                # print(dialogData.folder)
                 tts.save(directory+'/'+name+'.mp3')
                 num += 1
+            # ADDING DEFINITIONS, ACTIONS, REACTIVE AND MENU TO TEXT FILE
+            definitions = dialogData.get_arduino_definitions()
+            for definition in definitions:
+                cddf.write(definition + '\n')
+            actions = dialogData.get_actions()
+            for action in actions:
+                cddf.write("#define " + action + '\n')
             for item in dialogData.get_reactive_outputs():
+                item=str(item)
+                for ch in ['[', ']', "'"]:
+                    if ch in item:
+                        item=item.replace(ch,'')
                 cddf.write("const PROGMEM int reactive_MultiOp1[] = {5, 0, "+item+'}\n')
             # ADD MENU TO TEXT FILE
             menus=dialogData.get_all_menu()
@@ -77,6 +99,7 @@ if __name__ == '__main__':
     if not hasattr(config,'common_generated_mp3'):
         if VERBOSE: printf('INFO: generated mp3 parameter is not defined\n')
     xlsxHandler = XLSXHandler(config)
+    folderHandler = FolderHandler(config)
     allDataBlocks = {}  # map of datablocks, key: Excel sheet name, value: list of all block in the sheet
 
     print(getattr(config, 'common_xls'))
@@ -96,8 +119,12 @@ if __name__ == '__main__':
         elif os.path.exists(fileOrFolder):
             xlsxHandler.parseXLSXIntoDataBlocks(fileOrFolder)
 
+
     xlsxHandler.convertBlocksToDialogData()  # Blocks-> DialogData
     xlsxHandler.updateReferences()  # Resolving cross references
+    xlsxHandler.definition_handler()
     xlsxHandler.menu_handling(xlsxHandler.getBlocks())
+    xlsxHandler.create_reactive()
+    folderHandler.create_folder(xlsxHandler.getBlocks(), config)
     createMP3File(xlsxHandler.getDialogData(), MP3Handler(), config)
     printf('\nFINISHING: ' + os.path.basename(__file__) + '\n')
