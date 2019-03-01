@@ -36,7 +36,6 @@ def createMP3File(dialogData, handler, config):
     domains = dialogData.getAllDomains()
     for domain_name in domains:
         audiableData=handler.convertDialogData(dialogData, domains[domain_name]) #outputs
-        # print(audiableData)
         num=1
         i=1
         outputData = [item for line in audiableData for item in line]
@@ -47,14 +46,15 @@ def createMP3File(dialogData, handler, config):
                 name = '{0:03}'.format(num)
                 tts = gTTS(text=line, lang='cs')
                 directory=getattr(config,'common_generated_mp3')[0]
-                if dialogData.folder:
-                    in_folder=dialogData.folder.index("!!Folder")
+                folders=dialogData.get_folder()
+                if folders:
+                    in_folder=folders.index("!!Folder")
                     if i<=in_folder:
-                        directory=directory+'/'+dialogData.folder[0][8::]
-                        if dialogData.folder[i]=="!!Folder":
-                            del(dialogData.folder[0:i+1])
+                        directory=directory+'/'+folders[0][8::]
+                        if folders[i]=="!!Folder":
+                            num=0
+                            del(folders[0:i+1])
                             i = 1
-                # print(dialogData.folder)
                 tts.save(directory+'/'+name+'.mp3')
                 num += 1
             # ADDING DEFINITIONS, ACTIONS, REACTIVE AND MENU TO TEXT FILE
@@ -69,7 +69,7 @@ def createMP3File(dialogData, handler, config):
                 for ch in ['[', ']', "'"]:
                     if ch in item:
                         item=item.replace(ch,'')
-                cddf.write("const PROGMEM int reactive_MultiOp1[] = {5, 0, "+item+'}\n')
+                cddf.write("const PROGMEM int reactive_MultiOp1[] = {5,0,"+item+'}\n')
             # ADD MENU TO TEXT FILE
             menus=dialogData.get_all_menu()
             for menu in menus:
@@ -118,7 +118,6 @@ if __name__ == '__main__':
 
         elif os.path.exists(fileOrFolder):
             xlsxHandler.parseXLSXIntoDataBlocks(fileOrFolder)
-
 
     xlsxHandler.convertBlocksToDialogData()  # Blocks-> DialogData
     xlsxHandler.updateReferences()  # Resolving cross references

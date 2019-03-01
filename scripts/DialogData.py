@@ -241,4 +241,5 @@ class DialogData(object):
         return self._arduino_definitions
 
     def get_folder(self):
+        self.folder=[y for x in self.folder for y in (x if all(c == '.' for c in x) else [x])]
         return self.folder

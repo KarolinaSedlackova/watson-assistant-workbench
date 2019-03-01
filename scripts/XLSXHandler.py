@@ -147,7 +147,6 @@ class XLSXHandler(object):
                 return
         self._blocks.append((domain, prefix, block))
 
-
     def __is_condition_block(self, block):
         """ Returns true if first cell contains X_PLACEHOLDER
             or more then 1 condition indicator (one is just a header)
@@ -168,7 +167,6 @@ class XLSXHandler(object):
             :returns label or None (if no label was found )
         """
         label = None
-        test_val = []
         firstCell = block[0][0]  # firstCell is a header, condition
         if firstCell.startswith("!"):
             if "!Def" in firstCell:
@@ -178,8 +176,11 @@ class XLSXHandler(object):
                 self._dialogData._arduino_actions.append(firstCell[9::])
             if "!Fold" in firstCell:
                 self._dialogData.folder.append(firstCell)
+        # self._dialogData.folder=["." for i in range(len(block)) if "!Fold"in firstCell or firstCell.startswith("!")]
+        # print self._dialogData.folder
         if not firstCell.startswith("!"):
-            self._dialogData.folder.append(".")
+            times=len(block)
+            self._dialogData.folder.append("."*times)
         if firstCell.startswith(u':') and len(block[0][0]) > 1:
             label = firstCell[1:]
             if self._dialogData.isLabel(label):
@@ -392,9 +393,10 @@ class XLSXHandler(object):
                 else:
                     nodeData.addRawOutput(row[1:], self._dialogData.getAllEntities())
                     print(row[1])
+
     def concatenate_menus_to_list(self):
         # find menu in blocks and make list of them
-        numerized_outputs=self._numerized_outputs
+        numerized_outputs = self._numerized_outputs
         blocks = self._blocks
         for block in blocks:
             if block[2][0][1] and len(block[2]) == 1:
@@ -402,60 +404,70 @@ class XLSXHandler(object):
                     self._dialogData._menu.append(self.menu_blocks[0])
                     self.menu_blocks.pop(0)
                     self._dialogData._menu.append(len(block[2]))
+                    # print self.menu_blocks
             if block[2][0][0] and not block[2][0][1]:
                 if '!Menu' in block[2][0][0]:
                     self._dialogData._menu.append(block[2][0][0])
+
             elif len(block[2]) > 1:
                 if not block [2][0][0]:
                     self._dialogData._menu.append(self.menu_blocks[0])
                     self.menu_blocks.pop(0)
                     self._dialogData._menu.append(len(block[2]))
-        # print self._dialogData.get_menu()
+
     def create_numerized_outputs(self):
         menu_reacts=self.menu_reacts
-        # print menu_reacts
-        outputs = self._numerized_outputs
         blocks = self._blocks
         menu = self.menu_blocks
         num_of_options=self._num_of_options
         complete_list_of_all_outputs=self._dialogData._all_menu_outputs
+        outputs_in_folders=[]
         # CREATING A LIST OF A SECOND COLUMN IN EXCEL SHEET
         for block in blocks:
             if block[2][0][1] and len(block[2]) == 1:
-                outputs.append(block[2][0][1])
+                outputs_in_folders.append(".")
                 complete_list_of_all_outputs.append(block[2][0][1])
                 if block[2][0][1] and not block[2][0][0]:
                     num_of_options.append(len(block[2]))
-
             elif len(block[2]) > 1:
                 for i in range(len(block[2])):
-                    outputs.append(block[2][i][1])
+                    outputs_in_folders.append(".")
                     complete_list_of_all_outputs.append(block[2][i][1])
                 if block[2][0][1] and not block[2][0][0]:
                     num_of_options.append(len(block[2]))
-
+            if block[2][0][0] and "!Folder" in block[2][0][0]:
+                outputs_in_folders.append(1)
         # FINDING THE ITEMS OF THE MENU
-        # print outputs
-        index_of_match = [x for x,item in enumerate(outputs) if item in menu_reacts]
-        for n, item in enumerate(outputs):
-            num = str(n + 1).zfill(3)
-            outputs[n] = num
-            # ADDING THE ENUMERATED OUTPUTS TO MENU
+        index_of_match = [x for x,item in enumerate(complete_list_of_all_outputs) if item in menu_reacts]
+        n = 0
+        k = 1
+        # CREATE NUMERIZED OUTPUTS FOR HANDLING
+        for item in outputs_in_folders:
+            num = str(k).zfill(3)
+            if type (item) == str:
+                outputs_in_folders[n] = num
+                k += 1
+            else:
+                k = 1
+            n += 1
+        self._numerized_outputs = [x for x in outputs_in_folders if type(x) is not int]
+        n=0
+        # FIND ITEMS BELONGING TO MENU
+        for item in self._numerized_outputs:
             if n in index_of_match:
-                menu.append(num)
-                # menu.insert(-1,num_of_options[0])
+                menu.append(item)
                 num_of_options.pop(0)
-
-        # print outputs
+            n += 1
         self.concatenate_menus_to_list()
-        return outputs
+        return self._numerized_outputs
 
     def create_reactive(self):
+        # CREATE REACTIVE OUTPUT
         numerized_outputs = self._numerized_outputs
         conditions = self._cond_to_menu
         res=[]
-        index=0
-        num=0
+        index = 0
+        num = 0
         for n,block in enumerate(self._blocks):
             if block[2][0][0] and block[2][0][0].startswith("!") and not "!Folder" in block[2][0][0]:
                 if "!Menu" in block[2][0][0]:
@@ -478,14 +490,10 @@ class XLSXHandler(object):
                         res.append(len(block[2]))
                         index+=len(block[2])
                         num+=1
-        # print (res)
         reactives = list(more_itertools.split_at(res, lambda s: s == 'CUT'))
-        reactives=[x for x in reactives if len(x)>1]
-
+        reactives = [x for x in reactives if len(x)>1]
         for react in reactives:
-            # print react
             self._dialogData._reactive_outputs.append(react)
-
 
     def menu_handling(self, block):
         numerized_outputs = self.create_numerized_outputs()
@@ -496,9 +504,9 @@ class XLSXHandler(object):
         for menu in menus:
             menu_workspace=str(menu)
             param1 = 0
-            for ch in ['[',']',"'"]:
+            for ch in ['[',']', "'"]:
                 if ch in menu_workspace:
-                    menu_workspace=menu_workspace.replace(ch,"")
+                    menu_workspace=menu_workspace.replace(ch, "")
             menu_workspace=menu_workspace.replace('u!', '!')
             name_of_menu = menu_workspace[6:menu_workspace.find(';')]
             index_round_flat=6
@@ -506,31 +514,34 @@ class XLSXHandler(object):
                 param1+=0x01
             if 'intro'.upper() in name_of_menu:
                 param1+=0x02
-            if 'flat' in name_of_menu: #CHECKING FLAT OR ROUND PARAMETR
+            if 'flat' in name_of_menu: # CHECKING FLAT OR ROUND PARAMETR
                 index_round_flat=(name_of_menu.index('flat'))
             elif 'round' in name_of_menu:
-                index_round_flat =name_of_menu.index('round')
-                param1+=0x10
-            starting_index=6+len(name_of_menu)+1
-            name_of_menu=name_of_menu[:index_round_flat].strip()  # DEFINING A NAME OF THE MENU
-            menu_workspace=menu_workspace[starting_index::]
+                index_round_flat = name_of_menu.index('round')
+                param1 += 0x10
+            starting_index = 6+len(name_of_menu)+1
+            name_of_menu = name_of_menu[:index_round_flat].strip()  # DEFINING A NAME OF THE MENU
+            menu_workspace = menu_workspace[starting_index::]
             order=menu_workspace[6:menu_workspace.index(';')]
             # CHECKING AN ORDER OF THE MENU
             if "last" in order:
-                param1+=0x04
+                param1 += 0x04
             if "first" and "last" not in order:
-                param1+=0x08
-            starting_index=6+len(order)+1
-            menu_workspace=menu_workspace[starting_index::]
-            timeout=menu_workspace[8:menu_workspace.index(',')]       # DEFINING TIMEOUT OF THE MENU
-            starting_index=8+len(timeout)+1
-            ending_index=menu_workspace.index("!!Menu")
-            menu_workspace=menu_workspace[starting_index:ending_index-2]
+                param1 += 0x08
+            starting_index = 6+len(order)+1
+            menu_workspace = menu_workspace[starting_index::]
+            # Folder not defined yet - use 256 instead
+            folder = "256"
+            timeout = menu_workspace[8:menu_workspace.index(',')]       # DEFINING TIMEOUT OF THE MENU
+            starting_index = 8+len(timeout)+1
+            ending_index = menu_workspace.index("!!Menu")
+            menu_workspace = menu_workspace[starting_index:ending_index-2]
             # THE FINAL LOOK OF MENU FOR ARDUINO
-            final_menu=name_of_menu+"[]"+'{4, '+str(param1)+', '+'10'+', '+timeout+', '+menu_workspace+'}'
+            final_menu = name_of_menu+"[]"+'{4,'+str(param1)+','+'10'+','+timeout+','+folder+'_'+menu_workspace+'}'
             self._dialogData._all_menu.append(final_menu)
 
     def definition_handler(self):
+        # SETTING OF DEFINITIONS
         blocks=self._blocks
         keys = []
         vals = []
