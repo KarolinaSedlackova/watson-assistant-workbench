@@ -547,12 +547,23 @@ class XLSXHandler(object):
         vals = []
         dictionary = self._dictionary
         definitions = self._dialogData.get_arduino_definitions()
-        for item in definitions:
-            lst = filter(None, re.split("[= ]", item))
-            if '#' in lst[1]:
-                keys.append(lst[1])
-                vals.append(int(lst[2]))
+        with open("intents.h", "w") as hfile:
+            for item in definitions:
+                hfile.write("#define"+item[7::]+'\n')
+                lst = filter(None, re.split("[= ]", item))
+                if '#' in lst[1]:
+                    keys.append(lst[1])
+                    vals.append(int(lst[2]))
+            hfile.close()
         dictionary = dict(zip(keys, vals))
         for block in blocks:
             if block[2][0][0] in dictionary.keys():
                 self._cond_to_menu.append(dictionary[block[2][0][0]])
+                # print dictionary[block[2][0][0]]
+
+    def action_handler(self):
+        actions=self._dialogData.get_actions()
+        with open ("action.h","w") as hfile:
+            for action in actions:
+                hfile.write("#define "+action+'\n')
+            hfile.close()

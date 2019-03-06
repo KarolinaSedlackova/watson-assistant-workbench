@@ -41,22 +41,22 @@ def createMP3File(dialogData, handler, config):
         outputData = [item for line in audiableData for item in line]
         #create mp3s and put their name to txt file
         with open('cddf.txt', 'w') as cddf:
-            for line in outputData:
-                i+=1
-                name = '{0:03}'.format(num)
-                tts = gTTS(text=line, lang='cs')
-                directory=getattr(config,'common_generated_mp3')[0]
-                folders=dialogData.get_folder()
-                if folders:
-                    in_folder=folders.index("!!Folder")
-                    if i<=in_folder:
-                        directory=directory+'/'+folders[0][8::]
-                        if folders[i]=="!!Folder":
-                            num=0
-                            del(folders[0:i+1])
-                            i = 1
-                tts.save(directory+'/'+name+'.mp3')
-                num += 1
+            # for line in outputData:
+            #     # i+=1
+            #     # name = '{0:03}'.format(num)
+            #     # tts = gTTS(text=line, lang='cs')
+            #     # directory=getattr(config,'common_generated_mp3')[0]
+            #     # folders=dialogData.get_folder()
+            #     # if folders:
+            #     #     in_folder=folders.index("!!Folder")
+            #     #     if i<=in_folder:
+            #     #         directory=directory+'/'+folders[0][8::]
+            #     #         if folders[i]=="!!Folder":
+            #     #             num=0
+            #     #             del(folders[0:i+1])
+            #     #             i = 1
+            #     # tts.save(directory+'/'+name+'.mp3')
+            #     # num += 1
             # ADDING DEFINITIONS, ACTIONS, REACTIVE AND MENU TO TEXT FILE
             definitions = dialogData.get_arduino_definitions()
             for definition in definitions:
@@ -122,6 +122,7 @@ if __name__ == '__main__':
     xlsxHandler.convertBlocksToDialogData()  # Blocks-> DialogData
     xlsxHandler.updateReferences()  # Resolving cross references
     xlsxHandler.definition_handler()
+    xlsxHandler.action_handler()
     xlsxHandler.menu_handling(xlsxHandler.getBlocks())
     xlsxHandler.create_reactive()
     folderHandler.create_folder(xlsxHandler.getBlocks(), config)
