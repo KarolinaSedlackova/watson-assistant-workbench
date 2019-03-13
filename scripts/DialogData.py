@@ -49,7 +49,8 @@ class DialogData(object):
         self._reactive_outputs = []
         self._arduino_definitions = []
         self._arduino_actions = []
-        self.folder=[]
+        self.folder = []
+        self.dialog_all = []
 
     #  LABEL
     # ******************************************
@@ -243,3 +244,6 @@ class DialogData(object):
     def get_folder(self):
         self.folder=[y for x in self.folder for y in (x if all(c == '.' for c in x) else [x])]
         return self.folder
+
+    def get_dialog_all(self):
+        return self.dialog_all

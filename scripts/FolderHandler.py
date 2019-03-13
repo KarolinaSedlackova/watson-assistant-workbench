@@ -26,4 +26,3 @@ class FolderHandler(object):
                 path= os.path.abspath(getattr(config,'common_generated_mp3')[0])
                 if not os.path.isdir(path+"/"+folder):
                     os.makedirs(path+"/"+folder)
-

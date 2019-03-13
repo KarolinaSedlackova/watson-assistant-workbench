@@ -24,57 +24,54 @@ from MP3Handler import MP3Handler
 from wawCommons import printf, eprintf
 from FolderHandler import FolderHandler
 from gtts import gTTS
-import re
-
 
 
 def createMP3File(dialogData, handler, config):
-    outputData=[]
+    output_data = []
     if hasattr(config, 'common_generated_mp3') and not os.path.exists(getattr(config, 'common_generated_mp3')[0]):
-           os.makedirs(getattr(config, 'common_generated_mp3')[0])
-           print('Created new directory ' + getattr(config, 'common_generated_mp3')[0])
+        os.makedirs(getattr(config, 'common_generated_mp3')[0])
+        print('Created new directory ' + getattr(config, 'common_generated_mp3')[0])
     domains = dialogData.getAllDomains()
     for domain_name in domains:
-        audiableData=handler.convertDialogData(dialogData, domains[domain_name]) #outputs
-        num=1
-        i=1
-        outputData = [item for line in audiableData for item in line]
-        #create mp3s and put their name to txt file
+        audiable_data = handler.convertDialogData(dialogData, domains[domain_name])  # outputs
+        num = 1
+        i = 1
+        output_data = [item for line in audiable_data for item in line]
+        # create mp3s and put their name to txt file
         with open('cddf.txt', 'w') as cddf:
-            # for line in outputData:
-            #     # i+=1
-            #     # name = '{0:03}'.format(num)
-            #     # tts = gTTS(text=line, lang='cs')
-            #     # directory=getattr(config,'common_generated_mp3')[0]
-            #     # folders=dialogData.get_folder()
-            #     # if folders:
-            #     #     in_folder=folders.index("!!Folder")
-            #     #     if i<=in_folder:
-            #     #         directory=directory+'/'+folders[0][8::]
-            #     #         if folders[i]=="!!Folder":
-            #     #             num=0
-            #     #             del(folders[0:i+1])
-            #     #             i = 1
-            #     # tts.save(directory+'/'+name+'.mp3')
-            #     # num += 1
+            for line in output_data:
+                i += 1
+                name = '{0:03}'.format(num)
+                tts = gTTS(text=line, lang='cs')
+                directory = getattr(config, 'common_generated_mp3')[0]
+                folders = dialogData.get_folder()
+                if folders:
+                    in_folder = folders.index("!!Folder")
+                    if i <= in_folder:
+                        directory = directory+'/'+folders[0][8::]
+                        if folders[i] == "!!Folder":
+                            num = 0
+                            del(folders[0:i+1])
+                            i = 1
+                tts.save(directory+'/'+name+'.mp3')
+                num += 1
             # ADDING DEFINITIONS, ACTIONS, REACTIVE AND MENU TO TEXT FILE
-            definitions = dialogData.get_arduino_definitions()
-            for definition in definitions:
-                cddf.write(definition + '\n')
-            actions = dialogData.get_actions()
-            for action in actions:
-                cddf.write("#define " + action + '\n')
             for item in dialogData.get_reactive_outputs():
                 item=str(item)
                 for ch in ['[', ']', "'"]:
                     if ch in item:
-                        item=item.replace(ch,'')
+                        item=item.replace(ch, '')
                 cddf.write("const PROGMEM int reactive_MultiOp1[] = {5,0,"+item+'}\n')
             # ADD MENU TO TEXT FILE
             menus=dialogData.get_all_menu()
             for menu in menus:
                 cddf.write('const PROGMEM int '+str(menu)+'\n')
+            dialog_all=dialogData.get_dialog_all()
+            s_dialog_all=', '.join(dialog_all)
+            cddf.write('const int* const dialog_all[] PROGMEM = {'+s_dialog_all+'}')
+            cddf.write('const unsigned int dialog_all_sizes1[] = {')
             cddf.close()
+
 
 if __name__ == '__main__':
     printf('\nSTARTING: ' + os.path.basename(__file__) + '\n')

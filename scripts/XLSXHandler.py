@@ -61,10 +61,13 @@ class XLSXHandler(object):
         self._NAME_POLICY = 'soft'  # TBD: enable to set the NamePolicy from config file
         self.menu_reacts = []   #item from dialog data
         self.menu_blocks = []  # menu blocks
-        self._numerized_outputs = []  # create numerized mp3
+        self.menu_actions = []
+        self._numbered_outputs = []  # create numbered mp3
         self._num_of_options=[]     #number of options in menu
-        self._cond_to_menu=[]
-        self._dictionary={}
+        self._cond_to_menu=[]       # list of menu condition
+        self._definition_dict={}
+        self.actions=[]
+        self.final_dictionary = {}
 
     def getBlocks(self):
         return self._blocks
@@ -141,8 +144,7 @@ class XLSXHandler(object):
                    prefix)
             if block[0][1]:
                 self.menu_reacts.append(block[0][1])
-            elif block[0][2]:
-               pass
+                self.menu_actions.append(block[0][2])
             else:
                 return
         self._blocks.append((domain, prefix, block))
@@ -170,17 +172,22 @@ class XLSXHandler(object):
         firstCell = block[0][0]  # firstCell is a header, condition
         if firstCell.startswith("!"):
             if "!Def" in firstCell:
-                # print type(firstCell)
                 self._dialogData._arduino_definitions.append(firstCell)
             if "!Act" in firstCell:
                 self._dialogData._arduino_actions.append(firstCell[9::])
-            if "!Fold" in firstCell:
-                self._dialogData.folder.append(firstCell)
-        # self._dialogData.folder=["." for i in range(len(block)) if "!Fold"in firstCell or firstCell.startswith("!")]
-        # print self._dialogData.folder
-        if not firstCell.startswith("!"):
-            times=len(block)
-            self._dialogData.folder.append("."*times)
+                if "=" not in firstCell:
+                    self.actions.append(firstCell)
+                else:
+                    index_rovnase = firstCell.index("=")
+                    value =str(firstCell[index_rovnase+1::])
+                    self.final_dictionary[firstCell]=int(value)
+            if firstCell.startswith ("!Menu"):
+                delimeter_index=str(firstCell).index(" ",6,-1)
+                self.actions.append(firstCell)
+                self._dialogData.dialog_all.append(firstCell[6:delimeter_index])
+            if firstCell.startswith("!Reaction"):
+                self.actions.append(firstCell)
+                self._dialogData.dialog_all.append(firstCell[10::])
         if firstCell.startswith(u':') and len(block[0][0]) > 1:
             label = firstCell[1:]
             if self._dialogData.isLabel(label):
@@ -350,8 +357,6 @@ class XLSXHandler(object):
         startsWithHeader = block[0][0].startswith(u'#')  # is header?
         if block[0][0].startswith('!') and not block[0][1]:
             pass
-        # elif block[0][0] == '!!Menu' and not block[0][1]:
-        #     pass
         elif not startsWithHeader and not block[0][1]:
             eprintf('ERROR: Internal error. __handle_intent_block handling ConditionBlock : %s\n', block[0])
             exit()
@@ -396,26 +401,21 @@ class XLSXHandler(object):
 
     def concatenate_menus_to_list(self):
         # find menu in blocks and make list of them
-        numerized_outputs = self._numerized_outputs
         blocks = self._blocks
         for block in blocks:
-            if block[2][0][1] and len(block[2]) == 1:
+            if block[2][0][1]:
                 if not block[2][0][0]:
                     self._dialogData._menu.append(self.menu_blocks[0])
                     self.menu_blocks.pop(0)
                     self._dialogData._menu.append(len(block[2]))
-                    # print self.menu_blocks
+            if block[2][0][2]:
+                self._dialogData._menu.append(self.menu_actions[0])
+                self.menu_actions.pop(0)
             if block[2][0][0] and not block[2][0][1]:
                 if '!Menu' in block[2][0][0]:
                     self._dialogData._menu.append(block[2][0][0])
 
-            elif len(block[2]) > 1:
-                if not block [2][0][0]:
-                    self._dialogData._menu.append(self.menu_blocks[0])
-                    self.menu_blocks.pop(0)
-                    self._dialogData._menu.append(len(block[2]))
-
-    def create_numerized_outputs(self):
+    def create_numbered_outputs(self):
         menu_reacts=self.menu_reacts
         blocks = self._blocks
         menu = self.menu_blocks
@@ -426,22 +426,26 @@ class XLSXHandler(object):
         for block in blocks:
             if block[2][0][1] and len(block[2]) == 1:
                 outputs_in_folders.append(".")
+                self._dialogData.folder.append(".")
                 complete_list_of_all_outputs.append(block[2][0][1])
                 if block[2][0][1] and not block[2][0][0]:
                     num_of_options.append(len(block[2]))
             elif len(block[2]) > 1:
                 for i in range(len(block[2])):
-                    outputs_in_folders.append(".")
                     complete_list_of_all_outputs.append(block[2][i][1])
+                    outputs_in_folders.append(".")
+                    self._dialogData.folder.append(".")
                 if block[2][0][1] and not block[2][0][0]:
+                    # outputs_in_folders.append(".")
                     num_of_options.append(len(block[2]))
             if block[2][0][0] and "!Folder" in block[2][0][0]:
+                self._dialogData.folder.append(block[2][0][0])
                 outputs_in_folders.append(1)
         # FINDING THE ITEMS OF THE MENU
-        index_of_match = [x for x,item in enumerate(complete_list_of_all_outputs) if item in menu_reacts]
+        index_of_match = [x for x, item in enumerate(complete_list_of_all_outputs) if item in menu_reacts]
         n = 0
         k = 1
-        # CREATE NUMERIZED OUTPUTS FOR HANDLING
+        # CREATE NUMBERED OUTPUTS FOR HANDLING
         for item in outputs_in_folders:
             num = str(k).zfill(3)
             if type (item) == str:
@@ -450,53 +454,54 @@ class XLSXHandler(object):
             else:
                 k = 1
             n += 1
-        self._numerized_outputs = [x for x in outputs_in_folders if type(x) is not int]
-        n=0
+        self._numbered_outputs = [x for x in outputs_in_folders if type(x) is not int]
+        n = 0
         # FIND ITEMS BELONGING TO MENU
-        for item in self._numerized_outputs:
+        for item in self._numbered_outputs:
             if n in index_of_match:
                 menu.append(item)
                 num_of_options.pop(0)
             n += 1
         self.concatenate_menus_to_list()
-        return self._numerized_outputs
+        print self._dialogData.get_menu()
+        return self._numbered_outputs
 
     def create_reactive(self):
         # CREATE REACTIVE OUTPUT
-        numerized_outputs = self._numerized_outputs
+        numbered_outputs = self._numbered_outputs
         conditions = self._cond_to_menu
         res=[]
         index = 0
         num = 0
-        for n,block in enumerate(self._blocks):
-            if block[2][0][0] and block[2][0][0].startswith("!") and not "!Folder" in block[2][0][0]:
-                if "!Menu" in block[2][0][0]:
-                    break
-                res.append("CUT")
-            if len(block[2])==1:
-                if block[2][0][1] and not "!Menu" in block[2][0][0]:
-                    res.append(conditions[num])
-                    res.append(numerized_outputs[index])
-                    res.append(len(block[2]))
-                    index+=1
-                    num+=1
-                if block[2][0][0].startswith("!Folder"):
-                    res.append(str(block[2][0][0][8::]))
-            else:
-                for i in range (len(block[2])):
-                    if block[2][i][0]:
+        # CREATING OF REACTIVE PATTERN 
+        for n, block in enumerate(self._blocks):
+            if block[2][0][0]:
+                if block[2][0][0].startswith("!") and "!Folder" not in block[2][0][0]:
+                    res.append("CUT")
+                if len(block[2]) == 1:
+                    if block[2][0][1] and not "!Menu" in block[2][0][0]:
                         res.append(conditions[num])
-                        res.append(numerized_outputs[index])
+                        res.append(numbered_outputs[index])
                         res.append(len(block[2]))
-                        index+=len(block[2])
-                        num+=1
+                        index += 1
+                        num += 1
+                    if block[2][0][0].startswith("!Folder"):
+                        res.append(str(block[2][0][0][8::]))
+                else:
+                    for i in range (len(block[2])):
+                        if block[2][i][0]:
+                            res.append(conditions[num])
+                            res.append(numbered_outputs[index])
+                            res.append(len(block[2]))
+                            index += len(block[2])
+                            num += 1
         reactives = list(more_itertools.split_at(res, lambda s: s == 'CUT'))
-        reactives = [x for x in reactives if len(x)>1]
+        reactives = [x for x in reactives if len(x) > 1]
         for react in reactives:
             self._dialogData._reactive_outputs.append(react)
 
     def menu_handling(self, block):
-        numerized_outputs = self.create_numerized_outputs()
+        self.create_numbered_outputs()
         menu = self._dialogData.get_menu()
         # divide all menus to individual lists
         menus = list(more_itertools.split_after(menu, lambda s: s == u'!!Menu'))
@@ -504,18 +509,18 @@ class XLSXHandler(object):
         for menu in menus:
             menu_workspace=str(menu)
             param1 = 0
-            for ch in ['[',']', "'"]:
+            for ch in ['[', ']', "'"]:
                 if ch in menu_workspace:
                     menu_workspace=menu_workspace.replace(ch, "")
             menu_workspace=menu_workspace.replace('u!', '!')
             name_of_menu = menu_workspace[6:menu_workspace.find(';')]
             index_round_flat=6
             if 'auto'.upper() in name_of_menu:
-                param1+=0x01
+                param1 += 0x01
             if 'intro'.upper() in name_of_menu:
-                param1+=0x02
-            if 'flat' in name_of_menu: # CHECKING FLAT OR ROUND PARAMETR
-                index_round_flat=(name_of_menu.index('flat'))
+                param1 += 0x02
+            if 'flat' in name_of_menu:  # CHECKING FLAT OR ROUND PARAMETR
+                index_round_flat = (name_of_menu.index('flat'))
             elif 'round' in name_of_menu:
                 index_round_flat = name_of_menu.index('round')
                 param1 += 0x10
@@ -545,8 +550,9 @@ class XLSXHandler(object):
         blocks=self._blocks
         keys = []
         vals = []
-        dictionary = self._dictionary
+        dictionary = self._definition_dict
         definitions = self._dialogData.get_arduino_definitions()
+        # CREATING HEAD FILE OF INTENTS
         with open("intents.h", "w") as hfile:
             for item in definitions:
                 hfile.write("#define"+item[7::]+'\n')
@@ -555,15 +561,26 @@ class XLSXHandler(object):
                     keys.append(lst[1])
                     vals.append(int(lst[2]))
             hfile.close()
+        # CREATING CONDITIONS
         dictionary = dict(zip(keys, vals))
         for block in blocks:
             if block[2][0][0] in dictionary.keys():
                 self._cond_to_menu.append(dictionary[block[2][0][0]])
-                # print dictionary[block[2][0][0]]
 
     def action_handler(self):
+        actions = self.actions
+        i = 1
+        for item in actions:
+            self.final_dictionary[item] = i
+            i += 1
+        in_menu = self.menu_actions
+        for n, action in enumerate(in_menu):
+            for key, value in self.final_dictionary.iteritems():
+                if action in key:
+                    in_menu[n] = str(value)
         actions=self._dialogData.get_actions()
-        with open ("action.h","w") as hfile:
+        # CREATING HEAD FILE OF ACTIONS
+        with open("action.h", "w") as hfile:
             for action in actions:
                 hfile.write("#define "+action+'\n')
             hfile.close()
