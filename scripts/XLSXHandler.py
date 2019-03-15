@@ -63,11 +63,12 @@ class XLSXHandler(object):
         self.menu_blocks = []  # menu blocks
         self.menu_actions = []
         self._numbered_outputs = []  # create numbered mp3
-        self._num_of_options=[]     #number of options in menu
+        self._num_of_options=[]     # number of options in menu
         self._cond_to_menu=[]       # list of menu condition
-        self._definition_dict={}
-        self.actions=[]
-        self.final_dictionary = {}
+        self._definition_dict={}    # dictionary of definitions, key: name of definition, value: value of definition
+        self.actions=[]             # list of not defined actions
+        self._action_dictionary = {}  # dictionary of actions, key: name of action, value: value of action
+        self.menu_folder = []       # list of folders where menu is saved
 
     def getBlocks(self):
         return self._blocks
@@ -154,9 +155,9 @@ class XLSXHandler(object):
             or more then 1 condition indicator (one is just a header)
         """
         no_special = len(re.sub('[^#$@&|]', '', block[0][0]))
-        if (Dialog.X_PLACEHOLDER in block[0][0] and not block[0][1]):  # header containing X_PLACEHOLDER
+        if Dialog.X_PLACEHOLDER in block[0][0] and not block[0][1]:  # header containing X_PLACEHOLDER
             return True
-        if ((no_special > 0) and block[0][1]):  # Simple intent-output pair,
+        if (no_special > 0) and block[0][1]:  # Simple intent-output pair,
             return True  # simple intent-output pair,
         return False
 
@@ -171,21 +172,21 @@ class XLSXHandler(object):
         label = None
         firstCell = block[0][0]  # firstCell is a header, condition
         if firstCell.startswith("!"):
-            if "!Def" in firstCell:
+            if "!Def" in firstCell: # finding definitions
                 self._dialogData._arduino_definitions.append(firstCell)
-            if "!Act" in firstCell:
+            if "!Act" in firstCell: # finding actions
                 self._dialogData._arduino_actions.append(firstCell[9::])
                 if "=" not in firstCell:
                     self.actions.append(firstCell)
                 else:
                     index_rovnase = firstCell.index("=")
                     value =str(firstCell[index_rovnase+1::])
-                    self.final_dictionary[firstCell]=int(value)
-            if firstCell.startswith ("!Menu"):
-                delimeter_index=str(firstCell).index(" ",6,-1)
+                    self._action_dictionary[firstCell]=int(value)
+            if firstCell.startswith ("!Menu"): # finding menu for action handling
+                delimeter_index=str(firstCell).index(" ", 6, -1)
                 self.actions.append(firstCell)
                 self._dialogData.dialog_all.append(firstCell[6:delimeter_index])
-            if firstCell.startswith("!Reaction"):
+            if firstCell.startswith("!Reaction"): # finding reaction for action handling
                 self.actions.append(firstCell)
                 self._dialogData.dialog_all.append(firstCell[10::])
         if firstCell.startswith(u':') and len(block[0][0]) > 1:
@@ -276,7 +277,6 @@ class XLSXHandler(object):
                 nodeData.addRawOutput(row[1:], self._dialogData.getLabelsMap())
             else:
                 eprintf('Warning: Format error, no output defined for the condition :%s', row)
-
 
     def __handle_condition_block(self, block, domain, label):
         """ Handles simple pair condition-output,
@@ -400,7 +400,7 @@ class XLSXHandler(object):
                     print(row[1])
 
     def concatenate_menus_to_list(self):
-        # find menu in blocks and make list of them
+        ''' find menu in blocks and make list of them '''
         blocks = self._blocks
         for block in blocks:
             if block[2][0][1]:
@@ -416,6 +416,7 @@ class XLSXHandler(object):
                     self._dialogData._menu.append(block[2][0][0])
 
     def create_numbered_outputs(self):
+        ''' Creating numbered outputs of mp3, also concatenate items belonging to menu'''
         menu_reacts=self.menu_reacts
         blocks = self._blocks
         menu = self.menu_blocks
@@ -436,7 +437,6 @@ class XLSXHandler(object):
                     outputs_in_folders.append(".")
                     self._dialogData.folder.append(".")
                 if block[2][0][1] and not block[2][0][0]:
-                    # outputs_in_folders.append(".")
                     num_of_options.append(len(block[2]))
             if block[2][0][0] and "!Folder" in block[2][0][0]:
                 self._dialogData.folder.append(block[2][0][0])
@@ -448,7 +448,7 @@ class XLSXHandler(object):
         # CREATE NUMBERED OUTPUTS FOR HANDLING
         for item in outputs_in_folders:
             num = str(k).zfill(3)
-            if type (item) == str:
+            if type(item) == str:
                 outputs_in_folders[n] = num
                 k += 1
             else:
@@ -463,14 +463,15 @@ class XLSXHandler(object):
                 num_of_options.pop(0)
             n += 1
         self.concatenate_menus_to_list()
-        print self._dialogData.get_menu()
         return self._numbered_outputs
 
     def create_reactive(self):
-        # CREATE REACTIVE OUTPUT
+        ''' Create reactive output for conversational assistant, also sort folders '''
+        fold_in_react = []
+        self.create_numbered_outputs()
         numbered_outputs = self._numbered_outputs
         conditions = self._cond_to_menu
-        res=[]
+        res = []
         index = 0
         num = 0
         # CREATING OF REACTIVE PATTERN 
@@ -479,34 +480,51 @@ class XLSXHandler(object):
                 if block[2][0][0].startswith("!") and "!Folder" not in block[2][0][0]:
                     res.append("CUT")
                 if len(block[2]) == 1:
-                    if block[2][0][1] and not "!Menu" in block[2][0][0]:
-                        res.append(conditions[num])
+                    if block[2][0][1] and "!Menu" not in block[2][0][0]:
+                        res.append(str(conditions[num]))
                         res.append(numbered_outputs[index])
                         res.append(len(block[2]))
                         index += 1
                         num += 1
                     if block[2][0][0].startswith("!Folder"):
                         res.append(str(block[2][0][0][8::]))
+                        indexx = self._dialogData.get_folder().index("!!Folder")
                 else:
-                    for i in range (len(block[2])):
+                    for i in range(len(block[2])):
                         if block[2][i][0]:
-                            res.append(conditions[num])
+                            res.append(str(conditions[num]))
                             res.append(numbered_outputs[index])
                             res.append(len(block[2]))
                             index += len(block[2])
                             num += 1
+
         reactives = list(more_itertools.split_at(res, lambda s: s == 'CUT'))
         reactives = [x for x in reactives if len(x) > 1]
+        folders=self._dialogData.get_folder()
         for react in reactives:
+            size_of_react=0
+            for item in react:
+                if type(item) == int:
+                    size_of_react += item
             self._dialogData._reactive_outputs.append(react)
+            self._dialogData.dialog_sizes.append(size_of_react)
+        fold_in_react= [folder[8::] for react in reactives for folder in folders if folder[8::] in react]
+        self.menu_folder = [str(folder[8::]) for folder in folders if folder[8::] not in fold_in_react and len(folder) > 9]
 
-    def menu_handling(self, block):
-        self.create_numbered_outputs()
+    def menu_handling(self):
+        ''' Menu handling - finding parameters of menu for conversational assistant'''
+        folders = self._dialogData.get_folder()
+        reactives = self._dialogData.get_reactive_outputs()
         menu = self._dialogData.get_menu()
         # divide all menus to individual lists
         menus = list(more_itertools.split_after(menu, lambda s: s == u'!!Menu'))
         # CREATING A WORKSPACE FOR MENU
         for menu in menus:
+            size_of_menu = 0
+            for item in menu:
+                if type(item) == int:
+                    size_of_menu = size_of_menu + item
+            self._dialogData.dialog_sizes.append(size_of_menu)
             menu_workspace=str(menu)
             param1 = 0
             for ch in ['[', ']', "'"]:
@@ -535,8 +553,8 @@ class XLSXHandler(object):
                 param1 += 0x08
             starting_index = 6+len(order)+1
             menu_workspace = menu_workspace[starting_index::]
-            # Folder not defined yet - use 256 instead
-            folder = "256"
+            folder = self.menu_folder[0]  # Folder where menu is saved
+            self.menu_folder.pop(0)
             timeout = menu_workspace[8:menu_workspace.index(',')]       # DEFINING TIMEOUT OF THE MENU
             starting_index = 8+len(timeout)+1
             ending_index = menu_workspace.index("!!Menu")
@@ -546,6 +564,7 @@ class XLSXHandler(object):
             self._dialogData._all_menu.append(final_menu)
 
     def definition_handler(self):
+        ''' Setting of definitions and working with them '''
         # SETTING OF DEFINITIONS
         blocks=self._blocks
         keys = []
@@ -568,14 +587,15 @@ class XLSXHandler(object):
                 self._cond_to_menu.append(dictionary[block[2][0][0]])
 
     def action_handler(self):
+        ''' Setting of actions and working with them '''
         actions = self.actions
         i = 1
         for item in actions:
-            self.final_dictionary[item] = i
+            self._action_dictionary[item] = i
             i += 1
         in_menu = self.menu_actions
         for n, action in enumerate(in_menu):
-            for key, value in self.final_dictionary.iteritems():
+            for key, value in self._action_dictionary.iteritems():
                 if action in key:
                     in_menu[n] = str(value)
         actions=self._dialogData.get_actions()

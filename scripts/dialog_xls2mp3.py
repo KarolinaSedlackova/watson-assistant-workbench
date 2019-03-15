@@ -68,8 +68,10 @@ def createMP3File(dialogData, handler, config):
                 cddf.write('const PROGMEM int '+str(menu)+'\n')
             dialog_all=dialogData.get_dialog_all()
             s_dialog_all=', '.join(dialog_all)
-            cddf.write('const int* const dialog_all[] PROGMEM = {'+s_dialog_all+'}')
-            cddf.write('const unsigned int dialog_all_sizes1[] = {')
+            cddf.write('const int* const dialog_all[] PROGMEM = {'+s_dialog_all+'}\n')
+            dialog_sizes=dialogData.get_dialog_sizes()
+            s_dialog_sizes=''.join(dialog_sizes)
+            cddf.write('const unsigned int dialog_all_sizes1[] = {'+s_dialog_sizes[1:-1]+'}\n')
             cddf.close()
 
 
@@ -120,8 +122,8 @@ if __name__ == '__main__':
     xlsxHandler.updateReferences()  # Resolving cross references
     xlsxHandler.definition_handler()
     xlsxHandler.action_handler()
-    xlsxHandler.menu_handling(xlsxHandler.getBlocks())
     xlsxHandler.create_reactive()
+    xlsxHandler.menu_handling()
     folderHandler.create_folder(xlsxHandler.getBlocks(), config)
     createMP3File(xlsxHandler.getDialogData(), MP3Handler(), config)
     printf('\nFINISHING: ' + os.path.basename(__file__) + '\n')

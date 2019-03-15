@@ -45,12 +45,13 @@ class DialogData(object):
         self._config = config  # we need config to get NAME_POLICY, verbosity,..
         self._VERBOSE = hasattr(config, 'common_verbose')
         self._NAME_POLICY = 'soft'  # TBD: enable to set the NamePolicy from config file
-        self._all_menu = [] # list of the all menu
-        self._reactive_outputs = []
-        self._arduino_definitions = []
-        self._arduino_actions = []
-        self.folder = []
-        self.dialog_all = []
+        self._all_menu = []  # list of the all menu
+        self._reactive_outputs = []  # list of all reactive outputs
+        self._arduino_definitions = []  # list of all definitions
+        self._arduino_actions = []  # list of all actions
+        self.folder = []  # list of folders to creating new
+        self.dialog_all = []  # list of all dialog patterns
+        self.dialog_sizes = []  # list of sized of dialog patterns
 
     #  LABEL
     # ******************************************
@@ -246,4 +247,8 @@ class DialogData(object):
         return self.folder
 
     def get_dialog_all(self):
+        self.dialog_all.insert(0,"Default")
         return self.dialog_all
+
+    def get_dialog_sizes(self):
+        return str(self.dialog_sizes)
