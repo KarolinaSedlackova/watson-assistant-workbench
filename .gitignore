@@ -1,6 +1,7 @@
 outputs/
 #*.cfg
 *.pyc
+*private.cfg
 generated/
 /scripts/.idea
 /scripts/*.pyc
