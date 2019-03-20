@@ -56,12 +56,16 @@ def createMP3File(dialogData, handler, config):
                 tts.save(directory+'/'+name+'.mp3')
                 num += 1
             # ADDING DEFINITIONS, ACTIONS, REACTIVE AND MENU TO TEXT FILE
-            for item in dialogData.get_reactive_outputs():
-                item=str(item)
+            name="Default"
+            reactive_outputs=dialogData.get_reactive_outputs()
+            for item in reactive_outputs:
+                if not item[0].startswith('0'):
+                    name = item[0]
+                    item.pop(0)
                 for ch in ['[', ']', "'"]:
-                    if ch in item:
-                        item=item.replace(ch, '')
-                cddf.write("const PROGMEM int reactive_MultiOp1[] = {5,0,"+item+'}\n')
+                    if ch in str(item):
+                        item=str(item).replace(ch, '')
+                cddf.write("const PROGMEM int "+name+" = {5,0,"+item+'}\n')
             # ADD MENU TO TEXT FILE
             menus=dialogData.get_all_menu()
             for menu in menus:

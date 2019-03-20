@@ -479,6 +479,8 @@ class XLSXHandler(object):
             if block[2][0][0]:
                 if block[2][0][0].startswith("!") and "!Folder" not in block[2][0][0]:
                     res.append("CUT")
+                    if block[2][0][0].startswith("!Re"):
+                        res.append(block[2][0][0][10::])
                 if len(block[2]) == 1:
                     if block[2][0][1] and "!Menu" not in block[2][0][0]:
                         res.append(str(conditions[num]))
