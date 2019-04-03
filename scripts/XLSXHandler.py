@@ -69,6 +69,8 @@ class XLSXHandler(object):
         self.actions=[]             # list of not defined actions
         self._action_dictionary = {}  # dictionary of actions, key: name of action, value: value of action
         self.menu_folder = []       # list of folders where menu is saved
+        self.language_selector = None
+
 
     def getBlocks(self):
         return self._blocks
@@ -189,6 +191,9 @@ class XLSXHandler(object):
             if firstCell.startswith("!Reaction"): # finding reaction for action handling
                 self.actions.append(firstCell)
                 self._dialogData.dialog_all.append(firstCell[10::])
+            if firstCell.startswith("!Meta"):
+                self.language_selector = firstCell
+
         if firstCell.startswith(u':') and len(block[0][0]) > 1:
             label = firstCell[1:]
             if self._dialogData.isLabel(label):
@@ -606,3 +611,12 @@ class XLSXHandler(object):
             for action in actions:
                 hfile.write("#define "+action+'\n')
             hfile.close()
+
+    def get_language(self):
+        language =  self.language_selector [15:17]
+        if "en" in language:
+            print("English language was chosen for your bot")
+        else:
+            print (language+" language was chosen for your bot")
+        return language
+

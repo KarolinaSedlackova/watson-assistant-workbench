@@ -164,7 +164,6 @@ class DialogData(object):
     #   OPTIONS
 
     def get_all_menu(self):
-        # print self._all_menu
         return self._all_menu
 
     # createUnique ..
@@ -252,3 +251,5 @@ class DialogData(object):
 
     def get_dialog_sizes(self):
         return str(self.dialog_sizes)
+
+

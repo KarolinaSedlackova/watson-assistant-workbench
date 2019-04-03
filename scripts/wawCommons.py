@@ -24,13 +24,16 @@ restrictionTextNamePolicy = "NAME_POLICY can be only set to either 'soft', 'soft
 sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 sys.stderr = codecs.getwriter('utf8')(sys.stderr)
 
+
 def printf(format, *args):
     sys.stdout.write(format % args)
     sys.stdout.flush()
 
+
 def eprintf(format, *args):
     sys.stderr.write(format % args)
     sys.stderr.flush()
+
 
 def toCode(NAME_POLICY, code):
     global restrictionTextNamePolicy
@@ -55,9 +58,11 @@ def toCode(NAME_POLICY, code):
             exit(1)
     return newCode
 
+
 def normalizeIntentName(intentName):
     """Normalizes intent name to uppercase, with no dashes or underscores"""
     return re.sub('[-_]', '', intentName).upper()
+
 
 def toIntentName(NAME_POLICY, userReplacements, *intentSubnames):
     """Concatenates intent names with underscores,
@@ -135,6 +140,7 @@ def toIntentName(NAME_POLICY, userReplacements, *intentSubnames):
         uNewIntentName = uNewIntentName + u'_' + uIntentSubnameUser if uNewIntentName else uIntentSubnameUser
     return uNewIntentName.encode('utf-8')
 
+
 def toEntityName(NAME_POLICY, userReplacements, entityName):
     """Checks if the entity name satisfies all restrictions given by WA and user.
     WA replacements:
@@ -199,6 +205,7 @@ def toEntityName(NAME_POLICY, userReplacements, entityName):
         exit(1)
     return uEntityNameUser.encode('utf-8')
 
+
 def getFilesAtPath(pathList):
     filesAtPath = []
     for pathItem in pathList:
@@ -212,6 +219,7 @@ def getFilesAtPath(pathList):
         else:
             pass
     return filesAtPath
+
 
 def absoluteFilePaths(directory):
    for dirpath,_,filenames in os.walk(directory):
