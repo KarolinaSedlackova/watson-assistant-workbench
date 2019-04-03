@@ -5,3 +5,5 @@ requests
 unidecode
 more_itertools
 gtts
+json
+watson_developer_cloud
