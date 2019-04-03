@@ -14,4 +14,17 @@ For transformating text to mp3 is necessary to install Google text to speech mod
 pip install -m gTTs 
 ```
 
+list of languages is here: https://cloud.google.com/speech-to-text/docs/languages
+For changing your bot just change language code in !Meta command in xlsx file. 
 
+For using Watson Text to Speech create credentials in IBM Cloud and save them to credentials.json, save them and change classpath in config.py
+Also install watson developer cloud and import TextToSpeechV1
+```
+pip install --upgrade watson-developer-cloud
+
+```
+
+```
+from watson_developer_cloud import TextToSpeechV1
+
+```
