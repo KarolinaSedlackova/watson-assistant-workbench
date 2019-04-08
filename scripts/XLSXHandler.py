@@ -46,6 +46,8 @@ from DialogData import DialogData
 from itertools import izip_longest
 from NodeData import NodeData
 import more_itertools
+from collections import OrderedDict
+import operator
 
 
 class XLSXHandler(object):
@@ -596,16 +598,27 @@ class XLSXHandler(object):
     def action_handler(self):
         ''' Setting of actions and working with them '''
         actions = self.actions
+        # print (actions)
         i = 1
         for item in actions:
             self._action_dictionary[item] = i
             i += 1
-        in_menu = self.menu_actions
-        for n, action in enumerate(in_menu):
-            for key, value in self._action_dictionary.iteritems():
-                if action in key:
-                    in_menu[n] = str(value)
-        actions=self._dialogData.get_actions()
+        # print self.menu_actions
+        self.menu_actions = [word.replace(',', '') for line in self.menu_actions for word in line.split() if line] # Find multiple actions
+        dd = self._action_dictionary
+        # print self.menu_actions
+
+        n = 0
+        empty = []
+        # concatenate action in with action in dictionary
+        for action in self.menu_actions:
+            for k in dd.iterkeys():
+                if action in k:
+                    empty.append(dd[k])
+        print empty
+        self.menu_actions = empty
+        print self.menu_actions
+        actions = self._dialogData.get_actions()
         # CREATING HEAD FILE OF ACTIONS
         with open("action.h", "w") as hfile:
             for action in actions:
