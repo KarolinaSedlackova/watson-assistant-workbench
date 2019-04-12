@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import itertools
 
 """
  We need to pass through content at least twice to connect label with node_names, we use third pass to generate XML
@@ -71,7 +72,9 @@ class XLSXHandler(object):
         self.actions=[]             # list of not defined actions
         self._action_dictionary = {}  # dictionary of actions, key: name of action, value: value of action
         self.menu_folder = []       # list of folders where menu is saved
-        self.language_selector = None
+        self.language_selector = None  # used language
+        self.composite_list = []  # list of composite properties
+        self.composite_actions = []
 
 
     def getBlocks(self):
@@ -195,7 +198,8 @@ class XLSXHandler(object):
                 self._dialogData.dialog_all.append(firstCell[10::])
             if firstCell.startswith("!Meta"):
                 self.language_selector = firstCell
-
+            if firstCell.startswith("!Composite"):
+                self.composite_list.append(firstCell)
         if firstCell.startswith(u':') and len(block[0][0]) > 1:
             label = firstCell[1:]
             if self._dialogData.isLabel(label):
@@ -421,9 +425,14 @@ class XLSXHandler(object):
             if block[2][0][0] and not block[2][0][1]:
                 if '!Menu' in block[2][0][0]:
                     self._dialogData._menu.append(block[2][0][0])
+                if "!!Composite" in block[2][0][0]:
+                    self.composite_actions.append(".")
+            if block[2][0][1] and not block[2][0][0] and not block[2][0][2]:
+                self.composite_actions.append(str(block[2][0][1]))
+                # print block[2][0][1]
 
     def create_numbered_outputs(self):
-        ''' Creating numbered outputs of mp3, also concatenate items belonging to menu'''
+        ''' Creating numbered outputs of mp3, also concatenate items belonging to menu '''
         menu_reacts=self.menu_reacts
         blocks = self._blocks
         menu = self.menu_blocks
@@ -498,6 +507,8 @@ class XLSXHandler(object):
                     if block[2][0][0].startswith("!Folder"):
                         res.append(str(block[2][0][0][8::]))
                         indexx = self._dialogData.get_folder().index("!!Folder")
+                    # if block[2][0][0].startswith("!Composite"):
+                    #     self.composite_handler()
                 else:
                     for i in range(len(block[2])):
                         if block[2][i][0]:
@@ -506,7 +517,6 @@ class XLSXHandler(object):
                             res.append(len(block[2]))
                             index += len(block[2])
                             num += 1
-
         reactives = list(more_itertools.split_at(res, lambda s: s == 'CUT'))
         reactives = [x for x in reactives if len(x) > 1]
         folders=self._dialogData.get_folder()
@@ -527,7 +537,8 @@ class XLSXHandler(object):
         menu = self._dialogData.get_menu()
         # divide all menus to individual lists
         menus = list(more_itertools.split_after(menu, lambda s: s == u'!!Menu'))
-        # CREATING A WORKSPACE FOR MENU
+        menus = [menu for menu in menus if '!Menu' in menu[0]]
+        self.composite_handler()
         for menu in menus:
             size_of_menu = 0
             for item in menu:
@@ -546,7 +557,7 @@ class XLSXHandler(object):
                 param1 += 0x01
             if 'intro'.upper() in name_of_menu:
                 param1 += 0x02
-            if 'flat' in name_of_menu:  # CHECKING FLAT OR ROUND PARAMETR
+            if 'flat' in name_of_menu:  # CHECKING FLAT OR ROUND PARAMETER
                 index_round_flat = (name_of_menu.index('flat'))
             elif 'round' in name_of_menu:
                 index_round_flat = name_of_menu.index('round')
@@ -604,20 +615,19 @@ class XLSXHandler(object):
             self._action_dictionary[item] = i
             i += 1
         # print self.menu_actions
+        self.menu_actions = [item for item in self.menu_actions if item is not None]
         self.menu_actions = [word.replace(',', '') for line in self.menu_actions for word in line.split() if line] # Find multiple actions
         dd = self._action_dictionary
         # print self.menu_actions
-
-        n = 0
         empty = []
         # concatenate action in with action in dictionary
         for action in self.menu_actions:
             for k in dd.iterkeys():
                 if action in k:
                     empty.append(dd[k])
-        print empty
+        # print empty
         self.menu_actions = empty
-        print self.menu_actions
+        # print self.menu_actions
         actions = self._dialogData.get_actions()
         # CREATING HEAD FILE OF ACTIONS
         with open("action.h", "w") as hfile:
@@ -632,4 +642,30 @@ class XLSXHandler(object):
         else:
             print (language+" language was chosen for your bot")
         return language
+
+    def composite_handler(self):
+        dialogdata_composite = []
+        list_of_composites = self.composite_list
+        list_of_actions = self.composite_actions
+        #  MERGING COMPOSITES
+        for composite in list_of_composites:
+            dot_in = list_of_actions.index('.')
+            dialogdata_composite.append(composite)
+            dialogdata_composite.extend((list_of_actions[0:dot_in]))
+            del list_of_actions[0:dot_in+1]
+        #  DIVIDING INTO SINGLE COMPOSITE PATTERNS
+        composites = list(more_itertools.split_before(dialogdata_composite, lambda s: u'!Composite' in s))
+        for composite in composites:
+            self._dialogData.dialog_sizes.append(len(composite)-1)
+            in_semicolon = composite[0].index(";")
+            name_of_composite = str(composite[0][10:in_semicolon])
+            type_finish = 0
+            if "parallel" in composite[0]:
+                type_finish += 0x01
+            if "nonblocking" in composite[0]:
+                type_finish += 0x02
+            final_menu = [name_of_composite, '7', type_finish, '1', composite[1::]]
+            self._dialogData.composites.append(final_menu)
+
+
 

@@ -122,6 +122,15 @@ def write_to_condensed_file(dialogData, config):
         dialog_sizes = dialogData.get_dialog_sizes()
         s_dialog_sizes = ''.join(dialog_sizes)
         cddf.write('const unsigned int dialog_all_sizes1[] = {' + s_dialog_sizes[1:-1] + '}\n')
+        composite = dialogData.get_comoposite()
+        print(composite)
+        for item in composite:
+            name = item[0]
+            item = item[1::]
+            for ch in ['[', ']', "'"]:
+                if ch in str(item):
+                    item = str(item).replace(ch, '')
+            cddf.write("const PROGMEM int " + name + " = {7,0" + str(item[1::])+'}\n')
         cddf.close()
 
 

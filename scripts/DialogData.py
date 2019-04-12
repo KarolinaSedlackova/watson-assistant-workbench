@@ -52,6 +52,7 @@ class DialogData(object):
         self.folder = []  # list of folders to creating new
         self.dialog_all = []  # list of all dialog patterns
         self.dialog_sizes = []  # list of sized of dialog patterns
+        self.composites = []
 
     #  LABEL
     # ******************************************
@@ -252,4 +253,5 @@ class DialogData(object):
     def get_dialog_sizes(self):
         return str(self.dialog_sizes)
 
-
+    def get_comoposite(self):
+        return self.composites
